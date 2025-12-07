@@ -10,6 +10,8 @@ import { WelcomeScreen } from '../screens/WelcomeScreen';
 import { LoginScreen } from '../screens/LoginScreen';
 import { RegisterScreen } from '../screens/RegisterScreen';
 import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
+import { SetupBusinessScreen } from '../screens/SetupBusinessScreen';
+import { SelectAgentScreen } from '../screens/SelectAgentScreen';
 import { CreateAgentScreen } from '../screens/CreateAgentScreen';
 import { AgentWorkspaceScreen } from '../screens/AgentWorkspaceScreen';
 import { ContentGeneratorScreen } from '../screens/ContentGeneratorScreen';
@@ -43,6 +45,14 @@ export const AppNavigator = () => {
         ) : (
           <>
             <Stack.Screen name="MainTabs" component={MainTabNavigator} />
+            <Stack.Screen 
+              name="SetupBusiness" 
+              component={SetupBusinessScreen}
+            />
+            <Stack.Screen 
+              name="SelectAgent" 
+              component={SelectAgentScreen}
+            />
             <Stack.Screen 
               name="CreateAgent" 
               component={CreateAgentScreen}

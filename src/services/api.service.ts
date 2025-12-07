@@ -1,14 +1,8 @@
 import axios, { AxiosInstance } from 'axios';
-import Constants from 'expo-constants';
 
-// API URL Configuration
-// Primary source: expo-config extras (bundled at build time)
-// Fallbacks: runtime env vars, then LAN IP for local dev
-const API_URL =
-  Constants.expoConfig?.extra?.apiUrl ||
-  process.env.EXPO_PUBLIC_API_URL ||
-  process.env.REACT_APP_API_URL ||
-  'http://192.168.0.27:5001/api';
+// Use your machine IP instead of localhost for React Native
+// Your IP: 192.168.0.27
+const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.0.27:5001/api';
 
 interface ApiResponse<T> {
   data?: T;
@@ -34,25 +28,18 @@ class ApiService {
         config.headers.Authorization = `Bearer ${this.token}`;
       }
       console.log('📤 API Request:', config.method?.toUpperCase(), config.url);
-      console.log('🌐 Base URL:', this.api.defaults.baseURL);
-      console.log('🔗 Full URL:', `${this.api.defaults.baseURL}${config.url}`);
       return config;
     });
 
     // Add response interceptor for error handling
     this.api.interceptors.response.use(
-      (response) => {
-        console.log('✅ API Success:', response.config.url, 'Status:', response.status);
-        return response;
-      },
+      (response) => response,
       (error) => {
         console.log('🔴 API Error:', {
           url: error.config?.url,
           status: error.response?.status,
-          statusText: error.response?.statusText,
           message: error.response?.data?.error || error.message,
           data: error.response?.data,
-          fullError: error.toString(),
         });
         
         return Promise.reject(error);
@@ -78,18 +65,11 @@ class ApiService {
   }
 
   async login(email: string, password: string) {
-    try {
-      console.log('🔐 Attempting login with:', email);
-      const response = await this.api.post('/auth/login', { email, password });
-      console.log('✅ Login response:', response.data);
-      if (response.data.token) {
-        this.setToken(response.data.token);
-      }
-      return response.data;
-    } catch (error: any) {
-      console.log('❌ Login failed:', error.response?.data || error.message);
-      throw error;
+    const response = await this.api.post('/auth/login', { email, password });
+    if (response.data.token) {
+      this.setToken(response.data.token);
     }
+    return response.data;
   }
 
   async getCurrentUser() {
@@ -134,13 +114,8 @@ class ApiService {
   }
 
   // Agent endpoints
-  async createAgent(businessId: string, agentName: string, role?: string, memory?: string) {
-    const response = await this.api.post('/agent/create', { 
-      businessId, 
-      agentName,
-      role: role || agentName,
-      memory: memory || '',
-    });
+  async createAgent(businessId: string, agentName: string) {
+    const response = await this.api.post('/agent/create', { businessId, agentName });
     return response.data;
   }
 

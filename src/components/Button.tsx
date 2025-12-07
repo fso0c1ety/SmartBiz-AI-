@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '../constants/spacing';
 import { useThemeStore } from '../store/useThemeStore';
@@ -39,10 +40,16 @@ export const Button: React.FC<ButtonProps> = ({
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: BorderRadius.md,
+      borderRadius: BorderRadius.lg,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 3,
     };
 
     // Size
@@ -55,7 +62,7 @@ export const Button: React.FC<ButtonProps> = ({
     // Variant
     const variantStyles: Record<string, ViewStyle> = {
       primary: {
-        backgroundColor: colors.primary,
+        backgroundColor: colors.secondary,
       },
       secondary: {
         backgroundColor: colors.surface,
@@ -63,7 +70,7 @@ export const Button: React.FC<ButtonProps> = ({
       outline: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: colors.primary,
+        borderColor: colors.secondary,
       },
       ghost: {
         backgroundColor: 'transparent',
@@ -75,7 +82,7 @@ export const Button: React.FC<ButtonProps> = ({
       ...sizeStyles[size],
       ...variantStyles[variant],
       ...(fullWidth && { width: '100%' }),
-      ...(disabled && { opacity: 0.5 }),
+      ...(disabled && { opacity: 0.6 }),
     };
   };
 
@@ -89,12 +96,12 @@ export const Button: React.FC<ButtonProps> = ({
     const variantStyles: Record<string, TextStyle> = {
       primary: { color: '#FFFFFF' },
       secondary: { color: colors.text },
-      outline: { color: colors.primary },
-      ghost: { color: colors.primary },
+      outline: { color: colors.secondary },
+      ghost: { color: colors.secondary },
     };
 
     return {
-      fontWeight: FontWeight.semibold,
+      fontWeight: FontWeight.bold,
       ...sizeStyles[size],
       ...variantStyles[variant],
     };

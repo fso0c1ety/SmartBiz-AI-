@@ -9,8 +9,10 @@ export type RootStackParamList = {
   Content: undefined;
   Profile: undefined;
   Home: undefined;
+  SetupBusiness: undefined;
+  SelectAgent: { businessId: string };
   CreateAgent: undefined;
-  AgentWorkspace: undefined;
+  AgentWorkspace: { agentId?: string };
   ContentGenerator: undefined;
   Settings: undefined;
 };

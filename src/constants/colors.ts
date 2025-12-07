@@ -1,34 +1,34 @@
 export const Colors = {
   light: {
-    primary: '#2D6AFF',
-    secondary: '#8B5CF6',
-    accent: '#F59E0B',
+    primary: '#10A37F',        // ChatGPT green
+    secondary: '#8E8EA0',      // Subtle gray
+    accent: '#10A37F',         // Green accent
     background: '#FFFFFF',
-    surface: '#F8F9FA',
+    surface: '#F7F7F8',
     card: '#FFFFFF',
-    text: '#000000',
-    textSecondary: '#6B7280',
-    border: '#E5E7EB',
+    text: '#202123',
+    textSecondary: '#6E6E80',
+    textTertiary: '#ACACBE',
+    border: '#E5E5E5',
     error: '#EF4444',
-    success: '#10B981',
-    successLight: '#D1FAE5',
+    success: '#10A37F',
     warning: '#F59E0B',
-    shadow: 'rgba(0, 0, 0, 0.1)',
+    shadow: 'rgba(0, 0, 0, 0.03)',
   },
   dark: {
-    primary: '#2D6AFF',
-    secondary: '#8B5CF6',
-    accent: '#F59E0B',
-    background: '#0F1419',
-    surface: '#1A1F26',
-    card: '#252D38',
-    text: '#FFFFFF',
-    textSecondary: '#9CA3AF',
-    border: '#374151',
-    error: '#F87171',
-    success: '#34D399',
-    successLight: '#065F46',
-    warning: '#FBBF24',
+    primary: '#10A37F',        // ChatGPT green
+    secondary: '#8E8EA0',      // Subtle gray
+    accent: '#19C37D',         // Lighter green
+    background: '#212121',
+    surface: '#2A2A2A',
+    card: '#2A2A2A',
+    text: '#ECECF1',
+    textSecondary: '#C5C5D2',
+    textTertiary: '#8E8EA0',
+    border: '#3E3E3E',
+    error: '#EF4444',
+    success: '#10A37F',
+    warning: '#F59E0B',
     shadow: 'rgba(0, 0, 0, 0.3)',
   },
 };

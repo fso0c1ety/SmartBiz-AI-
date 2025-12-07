@@ -7,19 +7,11 @@ import {
   TouchableOpacity,
   RefreshControl,
   Animated,
-  ScrollView,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Card } from '../components/Card';
-import { Header } from '../components/Header';
-import { FloatingActionButton } from '../components/FloatingActionButton';
-import { GradientCard } from '../components/GradientCard';
-import { StatCard } from '../components/StatCard';
-import { SearchBar } from '../components/SearchBar';
-import { Badge } from '../components/Badge';
-import { AgentAvatar } from '../components/AgentAvatar';
-import { CardSkeleton } from '../components/Skeleton';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '../constants/spacing';
 import { useThemeStore } from '../store/useThemeStore';
@@ -39,34 +31,31 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { isAuthenticated } = useAuthStore();
   const { getAllBusinesses } = useApi();
   const [isLoading, setIsLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 600,
+      duration: 400,
       useNativeDriver: true,
     }).start();
   }, []);
 
-  // Load user's agents when authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadAgents();
-    }
-  }, [isAuthenticated]);
+  useFocusEffect(
+    React.useCallback(() => {
+      if (isAuthenticated) {
+        loadAgents();
+      }
+    }, [isAuthenticated])
+  );
 
   const loadAgents = async () => {
     try {
       setIsLoading(true);
       const businesses = await getAllBusinesses();
-      
-      // Transform businesses to agents format
+
       const loadedAgents: AIAgent[] = businesses.map((business: any) => ({
         id: business.agents?.[0]?.id || business.id,
-        agentName: business.agents?.[0]?.agentName || 'AI Assistant',
         businessName: business.name,
         industry: business.industry || '',
         description: business.description || '',
@@ -74,12 +63,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         brandTone: business.brandTone || '',
         socialLinks: business.socialLinks || {},
         logo: business.logoUrl,
-        brandColors: business.brandColors || { primary: '#6366F1', secondary: '#8B5CF6' },
+        brandColors: business.brandColors || { primary: '#2563EB', secondary: '#1F2937' },
         goals: business.goals || [],
-        role: business.agents?.[0]?.role || 'AI Marketing Manager',
+        role: business.agents?.[0]?.agentName || 'AI Employee',
         createdAt: new Date(business.createdAt),
       }));
-      
+
       setAgents(loadedAgents);
     } catch (error) {
       console.error('Failed to load agents:', error);
@@ -97,192 +86,124 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     navigation.navigate('AgentWorkspace');
   };
 
-  const filteredAgents = agents.filter((agent) =>
-    agent.agentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.businessName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    agent.industry.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
-  const totalTasks = agents.reduce((sum, agent) => sum + (agent.goals?.length || 0), 0);
-  const activeAgents = agents.length;
-
   const renderAgentCard = ({ item }: { item: AIAgent }) => (
     <TouchableOpacity
+      activeOpacity={0.8}
       onPress={() => handleAgentPress(item)}
-      activeOpacity={0.7}
-      style={viewMode === 'grid' ? styles.gridItem : undefined}
+      style={styles.cardWrapper}
     >
-      <Card style={[styles.agentCard, viewMode === 'grid' && styles.gridCard]}>
-        <View style={styles.cardHeader}>
-          <AgentAvatar businessName={item.agentName} logo={item.logo} size={viewMode === 'grid' ? 40 : 50} />
-          <View style={styles.statusDot}>
-            <View style={[styles.dotInner, { backgroundColor: '#10B981' }]} />
-          </View>
-        </View>
-
-        <View style={styles.agentInfo}>
-          <Text style={[styles.businessName, { color: colors.text }]} numberOfLines={1}>
-            {item.agentName}
-          </Text>
-          <View style={styles.infoRow}>
-            <Text style={[styles.role, { color: colors.textSecondary }]} numberOfLines={1}>
-              {item.businessName} • {item.role}
-            </Text>
-          </View>
-        </View>
-
-        {viewMode === 'list' && (
-          <View style={styles.footer}>
-            <View style={styles.statsRow}>
-              <View style={styles.statItem}>
-                <Ionicons name="checkmark-circle" size={16} color={colors.primary} />
-                <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                  {item.goals?.length || 0} goals
+      <Animated.View style={[{ opacity: fadeAnim }]}>
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <View style={styles.cardContent}>
+            {/* Agent header */}
+            <View style={styles.agentHeader}>
+              <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
+                {item.logo ? (
+                  <Image
+                    source={{ uri: item.logo }}
+                    style={styles.logoImage}
+                  />
+                ) : (
+                  <Ionicons name="sparkles" size={22} color={colors.primary} />
+                )}
+              </View>
+              <View style={styles.agentInfo}>
+                <Text style={[styles.roleName, { color: colors.text }]} numberOfLines={1}>
+                  {item.role}
+                </Text>
+                <Text style={[styles.businessName, { color: colors.textSecondary }]} numberOfLines={1}>
+                  {item.businessName}
                 </Text>
               </View>
-              <View style={styles.statItem}>
-                <Ionicons name="time" size={16} color={colors.textSecondary} />
-                <Text style={[styles.statText, { color: colors.textSecondary }]}>
-                  Active
-                </Text>
-              </View>
+              <Ionicons name="chevron-forward" size={20} color={colors.textTertiary} />
             </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textSecondary} />
+
+            {/* Description */}
+            {item.description && (
+              <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+                {item.description}
+              </Text>
+            )}
+
+            {/* Industry badge */}
+            {item.industry && (
+              <View style={styles.footer}>
+                <View style={[styles.industryBadge, { backgroundColor: colors.surface }]}>
+                  <Text style={[styles.badgeText, { color: colors.textSecondary }]}>
+                    {item.industry}
+                  </Text>
+                </View>
+              </View>
+            )}
           </View>
-        )}
-      </Card>
+        </View>
+      </Animated.View>
     </TouchableOpacity>
   );
 
   const renderEmpty = () => (
     <View style={styles.emptyContainer}>
-      <View style={[styles.emptyIconContainer, { backgroundColor: colors.surface }]}>
-        <Text style={styles.emptyIcon}>🤖</Text>
+      <View style={[styles.emptyIcon, { backgroundColor: colors.surface }]}>
+        <Ionicons name="sparkles-outline" size={40} color={colors.textTertiary} />
       </View>
-      <Text style={[styles.emptyTitle, { color: colors.text }]}>
-        No AI Employees Yet
-      </Text>
+      <Text style={[styles.emptyTitle, { color: colors.text }]}>No AI Employees Yet</Text>
       <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
         Create your first AI employee to get started
       </Text>
       <TouchableOpacity
-        style={[styles.emptyButton, { backgroundColor: colors.primary }]}
-        onPress={() => navigation.navigate('CreateAgent')}
+        style={[styles.createButton, { backgroundColor: colors.primary }]}
+        onPress={() => navigation.navigate('SetupBusiness')}
       >
-        <Ionicons name="add-circle-outline" size={20} color="#FFFFFF" />
-        <Text style={styles.emptyButtonText}>Create AI Employee</Text>
+        <Ionicons name="add" size={18} color="#fff" />
+        <Text style={styles.createButtonText}>Create Employee</Text>
       </TouchableOpacity>
     </View>
   );
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={['top']}>
-      {/* Header Component */}
-      <Header
-        title="My AI Employees"
-        subtitle={`${activeAgents} active agents`}
-        showNotification={false}
-        showSearch={false}
-      />
-
-      <View style={styles.content}>
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Stats Section */}
-        {agents.length > 0 && (
-          <Animated.View style={[styles.statsSection, { opacity: fadeAnim }]}>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.statsScroll}>
-              <StatCard
-                title="Active Agents"
-                value={activeAgents}
-                icon="people"
-                trend={15}
-                color={colors.primary}
-              />
-              <StatCard
-                title="Total Goals"
-                value={totalTasks}
-                icon="flag"
-                trend={8}
-                color="#10B981"
-              />
-              <StatCard
-                title="This Week"
-                value="12"
-                icon="calendar"
-                trend={-3}
-                color="#F59E0B"
-              />
-            </ScrollView>
-          </Animated.View>
-        )}
-
-        {/* Search and View Toggle */}
-        {agents.length > 0 && (
-          <View style={styles.controlsSection}>
-            <SearchBar
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              placeholder="Search AI employees..."
-            />
-            <View style={styles.viewToggle}>
-              <TouchableOpacity
-                style={[
-                  styles.viewButton,
-                  viewMode === 'list' && [styles.viewButtonActive, { backgroundColor: colors.primary }]
-                ]}
-                onPress={() => setViewMode('list')}
-              >
-                <Ionicons
-                  name="list"
-                  size={20}
-                  color={viewMode === 'list' ? '#FFFFFF' : colors.textSecondary}
-                />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.viewButton,
-                  viewMode === 'grid' && [styles.viewButtonActive, { backgroundColor: colors.primary }]
-                ]}
-                onPress={() => setViewMode('grid')}
-              >
-                <Ionicons
-                  name="grid"
-                  size={20}
-                  color={viewMode === 'grid' ? '#FFFFFF' : colors.textSecondary}
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {/* Agents List */}
-        <FlatList
-          data={filteredAgents}
-          renderItem={renderAgentCard}
-          keyExtractor={(item) => item.id}
-          numColumns={viewMode === 'grid' ? 2 : 1}
-          key={viewMode}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-          ListEmptyComponent={isLoading ? null : renderEmpty}
-          refreshControl={
-            <RefreshControl
-              refreshing={isLoading}
-              onRefresh={handleRefresh}
-              tintColor={colors.primary}
-            />
-          }
-          scrollEnabled={false}
-        />
-      </ScrollView>
+    <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View>
+          <Text style={[styles.title, { color: colors.text }]}>SmartBiz AI</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {agents.length} {agents.length === 1 ? 'Employee' : 'Employees'}
+          </Text>
+        </View>
+        <TouchableOpacity
+          style={styles.settingsBtn}
+          onPress={() => navigation.navigate('Settings')}
+        >
+          <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
+
+      {/* Employees list */}
+      <FlatList
+        data={agents}
+        renderItem={renderAgentCard}
+        keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.listContent}
+        scrollEnabled={agents.length > 0}
+        ListEmptyComponent={renderEmpty}
+        refreshControl={
+          <RefreshControl
+            refreshing={isLoading}
+            onRefresh={handleRefresh}
+            tintColor={colors.primary}
+          />
+        }
+      />
 
       {/* Floating Action Button */}
       {agents.length > 0 && (
-        <FloatingActionButton
-          onPress={() => navigation.navigate('CreateAgent')}
-          icon="add"
-        />
+        <TouchableOpacity
+          style={[styles.fab, { backgroundColor: colors.primary }]}
+          onPress={() => navigation.navigate('SetupBusiness')}
+          activeOpacity={0.8}
+        >
+          <Ionicons name="add" size={28} color="#fff" />
+        </TouchableOpacity>
       )}
     </SafeAreaView>
   );
@@ -297,179 +218,141 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingTop: Spacing.sm,
+    paddingBottom: Spacing.lg,
   },
-  headerTitle: {
-    fontSize: 28,
+  title: {
+    fontSize: FontSize.xl,
     fontWeight: FontWeight.bold,
+    marginBottom: 2,
   },
-  headerSubtitle: {
+  subtitle: {
     fontSize: FontSize.sm,
-    marginTop: 4,
   },
-  settingsButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
+  settingsBtn: {
+    width: 40,
+    height: 40,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  statsSection: {
-    marginBottom: Spacing.md,
-  },
-  statsScroll: {
-    paddingHorizontal: Spacing.lg,
-    gap: Spacing.md,
-  },
-  controlsSection: {
-    paddingHorizontal: Spacing.lg,
-    marginBottom: Spacing.md,
-  },
-  viewToggle: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  viewButton: {
-    width: 44,
-    height: 44,
-    borderRadius: BorderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.05)',
-  },
-  viewButtonActive: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
   },
   listContent: {
     paddingHorizontal: Spacing.lg,
     paddingBottom: 100,
   },
-  gridItem: {
-    width: '48%',
-    marginRight: '4%',
-  },
-  agentCard: {
+  cardWrapper: {
     marginBottom: Spacing.md,
   },
-  gridCard: {
-    marginRight: 0,
+  card: {
+    borderRadius: BorderRadius.lg,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 1 },
+    shadowRadius: 2,
+    elevation: 1,
   },
-  cardHeader: {
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-    position: 'relative',
+  cardContent: {
+    padding: Spacing.lg,
+    gap: Spacing.sm,
   },
-  statusDot: {
-    position: 'absolute',
-    right: '35%',
-    top: 0,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#FFFFFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  dotInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  agentInfo: {
-    marginBottom: Spacing.sm,
-  },
-  businessName: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.bold,
-    marginBottom: 4,
-  },
-  infoRow: {
+  agentHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.xs,
+    gap: Spacing.md,
   },
-  role: {
-    fontSize: FontSize.xs,
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: '100%',
+    height: '100%',
+  },
+  agentInfo: {
     flex: 1,
+  },
+  roleName: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+    marginBottom: 2,
+  },
+  businessName: {
+    fontSize: FontSize.sm,
+  },
+  description: {
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+    marginTop: Spacing.xs,
   },
   footer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: Spacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
   },
-  statsRow: {
-    flexDirection: 'row',
-    gap: Spacing.md,
-  },
-  statItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  statText: {
-    fontSize: FontSize.xs,
-  },
-  emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: Spacing.xxl * 2,
-    paddingHorizontal: Spacing.lg,
-  },
-  emptyIconContainer: {
-    width: 120,
-    height: 120,
-    borderRadius: BorderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: Spacing.lg,
-  },
-  emptyIcon: {
-    fontSize: 60,
-  },
-  emptyTitle: {
-    fontSize: FontSize.xl,
-    fontWeight: FontWeight.bold,
-    marginBottom: Spacing.sm,
-  },
-  emptySubtitle: {
-    fontSize: FontSize.base,
-    textAlign: 'center',
-    marginBottom: Spacing.lg,
-  },
-  emptyButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+  industryBadge: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
     borderRadius: BorderRadius.md,
-    gap: Spacing.xs,
   },
-  emptyButtonText: {
-    color: '#FFFFFF',
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
+  badgeText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
   },
   fab: {
     position: 'absolute',
+    bottom: Spacing.xl,
     right: Spacing.lg,
-    bottom: Spacing.lg,
-    width: 60,
-    height: 60,
+    width: 52,
+    height: 52,
     borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 4,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+    paddingBottom: 100,
+  },
+  emptyIcon: {
+    width: 72,
+    height: 72,
+    borderRadius: BorderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: Spacing.lg,
+  },
+  emptyTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.semibold,
+    marginBottom: Spacing.xs,
+  },
+  emptySubtitle: {
+    fontSize: FontSize.base,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+    lineHeight: 22,
+  },
+  createButton: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.lg,
+  },
+  createButtonText: {
+    color: '#fff',
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.medium,
   },
 });

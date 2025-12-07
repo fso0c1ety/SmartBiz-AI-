@@ -76,9 +76,9 @@ export const useApi = () => {
 
   // Agent hooks
   const createAgent = useCallback(
-    async (agentData: { businessId: string; agentName: string; role?: string; memory?: string }) => {
+    async (businessId: string, agentName: string) => {
       try {
-        const result = await apiService.createAgent(agentData.businessId, agentData.agentName, agentData.role, agentData.memory);
+        const result = await apiService.createAgent(businessId, agentName);
         showToast('Agent created successfully!', 'success');
         return result;
       } catch (error: any) {

@@ -10,3 +10,5 @@ export { ContentGeneratorScreen } from './ContentGeneratorScreen';
 export { GeneratedContentScreen } from './GeneratedContentScreen';
 export { ProfileScreen } from './ProfileScreen';
 export { SettingsScreen } from './SettingsScreen';
+export { SelectAgentScreen } from './SelectAgentScreen';
+export { AgentOnboardingScreen } from './AgentOnboardingScreen';
