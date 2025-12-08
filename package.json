@@ -7,7 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
-    "build": "cd backend && npm install && npm run build",
+    "build": "cd backend && npm install --include=dev && npm run build",
     "serve": "cd backend && npm start"
   },
   "dependencies": {
