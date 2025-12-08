@@ -1,8 +1,7 @@
 import axios, { AxiosInstance } from 'axios';
+import API_CONFIG from '../config/api.config';
 
-// Use your machine IP instead of localhost for React Native
-// Your IP: 192.168.0.27
-const API_URL = process.env.REACT_APP_API_URL || 'http://192.168.0.27:5001/api';
+const API_URL = API_CONFIG.baseURL;
 
 interface ApiResponse<T> {
   data?: T;
@@ -16,7 +15,7 @@ class ApiService {
   constructor() {
     this.api = axios.create({
       baseURL: API_URL,
-      timeout: 120000, // 120 seconds (2 minutes) for AI responses
+      timeout: API_CONFIG.timeout,
       headers: {
         'Content-Type': 'application/json',
       },
