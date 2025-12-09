@@ -8,6 +8,8 @@ import {
   RefreshControl,
   Animated,
   Image,
+  Modal,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -18,6 +20,7 @@ import { useThemeStore } from '../store/useThemeStore';
 import { useAgentStore, AIAgent } from '../store/useAgentStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { useApi } from '../hooks/useApi';
+import { useToastStore } from '../store/useToastStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
 type HomeScreenProps = {
@@ -27,10 +30,14 @@ type HomeScreenProps = {
 export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const { colorScheme } = useThemeStore();
   const colors = Colors[colorScheme];
-  const { agents, selectAgent, setAgents } = useAgentStore();
+  const { agents, selectAgent, setAgents, deleteAgent: deleteAgentFromStore } = useAgentStore();
   const { isAuthenticated } = useAuthStore();
-  const { getAllBusinesses } = useApi();
+  const { getAllBusinesses, deleteBusiness } = useApi();
+  const { showToast } = useToastStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [agentToDelete, setAgentToDelete] = useState<AIAgent | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -56,6 +63,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
 
       const loadedAgents: AIAgent[] = businesses.map((business: any) => ({
         id: business.agents?.[0]?.id || business.id,
+        businessId: business.id,
         businessName: business.name,
         industry: business.industry || '',
         description: business.description || '',
@@ -74,6 +82,29 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       console.error('Failed to load agents:', error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleDeletePress = (agent: AIAgent) => {
+    setAgentToDelete(agent);
+    setDeleteModalVisible(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!agentToDelete) return;
+
+    setIsDeleting(true);
+    try {
+      const businessIdToDelete = agentToDelete.businessId || agentToDelete.id;
+      await deleteBusiness(businessIdToDelete);
+      deleteAgentFromStore(agentToDelete.id);
+      showToast(`${agentToDelete.businessName} removed successfully`, 'success');
+      setDeleteModalVisible(false);
+      setAgentToDelete(null);
+    } catch (error: any) {
+      showToast(error.message || 'Failed to remove agent', 'error');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -97,15 +128,8 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.cardContent}>
             {/* Agent header */}
             <View style={styles.agentHeader}>
-              <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-                {item.logo ? (
-                  <Image
-                    source={{ uri: item.logo }}
-                    style={styles.logoImage}
-                  />
-                ) : (
-                  <Ionicons name="sparkles" size={22} color={colors.primary} />
-                )}
+              <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
+                <Text style={styles.robotEmoji}>🤖</Text>
               </View>
               <View style={styles.agentInfo}>
                 <Text style={[styles.roleName, { color: colors.text }]} numberOfLines={1}>
@@ -125,7 +149,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
               </Text>
             )}
 
-            {/* Industry badge */}
+            {/* Industry badge and delete button */}
             {item.industry && (
               <View style={styles.footer}>
                 <View style={[styles.industryBadge, { backgroundColor: colors.surface }]}>
@@ -133,6 +157,12 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
                     {item.industry}
                   </Text>
                 </View>
+                <TouchableOpacity
+                  style={styles.deleteButton}
+                  onPress={() => handleDeletePress(item)}
+                >
+                  <Ionicons name="trash-outline" size={16} color="#EF4444" />
+                </TouchableOpacity>
               </View>
             )}
           </View>
@@ -205,6 +235,49 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
       )}
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDeleteModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: colors.card }]}
+          >
+            <View style={styles.modalIcon}>
+              <Ionicons name="alert-circle" size={40} color="#EF4444" />
+            </View>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Remove AI Employee?
+            </Text>
+            <Text style={[styles.modalMessage, { color: colors.textSecondary }]}>
+              Are you sure you want to remove {agentToDelete?.businessName}? This action cannot be undone.
+            </Text>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, { backgroundColor: colors.surface }]}
+                onPress={() => setDeleteModalVisible(false)}
+                disabled={isDeleting}
+              >
+                <Text style={[styles.modalButtonText, { color: colors.text }]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.deleteButtonConfirm]}
+                onPress={handleConfirmDelete}
+                disabled={isDeleting}
+              >
+                <Text style={[styles.modalButtonText, { color: '#fff' }]}>
+                  {isDeleting ? 'Removing...' : 'Remove'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -266,6 +339,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  robotEmoji: {
+    fontSize: 24,
   },
   logoImage: {
     width: '100%',
@@ -354,5 +430,63 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: FontSize.base,
     fontWeight: FontWeight.medium,
+  },
+  deleteButton: {
+    padding: Spacing.sm,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.lg,
+  },
+  modalContent: {
+    borderRadius: BorderRadius.lg,
+    padding: Spacing.xl,
+    alignItems: 'center',
+    width: '100%',
+    maxWidth: 320,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  modalIcon: {
+    marginBottom: Spacing.lg,
+  },
+  modalTitle: {
+    fontSize: FontSize.lg,
+    fontWeight: FontWeight.bold,
+    marginBottom: Spacing.sm,
+    textAlign: 'center',
+  },
+  modalMessage: {
+    fontSize: FontSize.base,
+    textAlign: 'center',
+    marginBottom: Spacing.xl,
+    lineHeight: 20,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    width: '100%',
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: Spacing.md,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButtonConfirm: {
+    backgroundColor: '#EF4444',
+  },
+  modalButtonText: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
   },
 });

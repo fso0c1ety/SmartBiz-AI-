@@ -39,6 +39,7 @@ class ApiService {
           status: error.response?.status,
           message: error.response?.data?.error || error.message,
           data: error.response?.data,
+          errors: JSON.stringify(error.response?.data?.errors, null, 2),
         });
         
         return Promise.reject(error);

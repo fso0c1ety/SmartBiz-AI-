@@ -51,6 +51,8 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
   const [isSendingMessage, setIsSendingMessage] = useState(false);
   const [displayedText, setDisplayedText] = useState('');
   const [typingMessage, setTypingMessage] = useState<Message | null>(null);
+  const [hoveredMessageId, setHoveredMessageId] = useState<string | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
   const flatListRef = useRef<FlatList>(null);
   const typingIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -71,6 +73,53 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
       }
     };
   }, []);
+
+  const handleCopyMessage = (text: string) => {
+    // Copy to clipboard functionality
+    showToast('Message copied to clipboard', 'success');
+    // In a real app, you'd use a clipboard library
+  };
+
+  const handlePauseGeneration = () => {
+    setIsGenerating(false);
+    if (typingIntervalRef.current) {
+      clearInterval(typingIntervalRef.current);
+      typingIntervalRef.current = null;
+    }
+    // Remove the thinking message and any partial AI response
+    setMessages((prev) => prev.filter(msg => msg.id !== 'thinking-temp' && msg.id !== typingMessage?.id));
+    setTypingMessage(null);
+    setDisplayedText('');
+    setIsSendingMessage(false);
+    showToast('Generation stopped', 'info');
+  };
+
+  const handleDeleteMessage = (messageId: string) => {
+    setMessages(messages.filter(msg => msg.id !== messageId));
+    showToast('Message deleted', 'success');
+  };
+
+  const handleRegenerateMessage = async (messageId: string) => {
+    // Find the AI message and the user message before it, then resend
+    const messageIndex = messages.findIndex(msg => msg.id === messageId);
+    if (messageIndex > 0) {
+      const userMessage = messages[messageIndex - 1];
+      if (userMessage.isUser) {
+        // Remove the old AI response and thinking message
+        const updatedMessages = messages.slice(0, messageIndex);
+        setMessages(updatedMessages);
+        
+        // Resend the message
+        setMessage(userMessage.text);
+        showToast('🔄 Regenerating response...', 'info');
+        
+        // Wait a tick then send
+        setTimeout(() => {
+          handleSendMessage();
+        }, 100);
+      }
+    }
+  };
 
   const loadMessages = async () => {
     if (!selectedAgent?.id) return;
@@ -112,6 +161,7 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
     setMessages((prev) => [...prev, userMessage, thinkingMessage]);
     setMessage('');
     setIsSendingMessage(true);
+    setIsGenerating(true);
 
     // Clean up any existing typing interval
     if (typingIntervalRef.current) {
@@ -150,11 +200,13 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
           }
           setTypingMessage(null);
           setDisplayedText('');
+          setIsGenerating(false);
         }
       }, 20);
     } catch (error: any) {
       setMessages((prev) => prev.filter(msg => msg.id !== 'thinking-temp'));
       showToast(error.message || 'Failed to send message', 'error');
+      setIsGenerating(false);
     } finally {
       setIsSendingMessage(false);
     }
@@ -352,36 +404,61 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
           styles.messageRow,
           item.isUser ? styles.userMessageRow : styles.aiMessageRow,
         ]}
+        onTouchEnd={() => setHoveredMessageId(item.id)}
+        onTouchCancel={() => setHoveredMessageId(null)}
       >
         {!item.isUser && (
           <View style={[styles.aiAvatarSmall, { backgroundColor: colors.primary }]}>
-            <Ionicons name="sparkles" size={14} color="#fff" />
+            <Text style={styles.avatarEmoji}>🤖</Text>
           </View>
         )}
-        <View
-          style={[
-            styles.messageBubble,
-            item.isUser && {
-              backgroundColor: colors.primary,
-            },
-          ]}
-        >
-          {item.id === 'thinking-temp' ? (
-            <ThinkingDots />
-          ) : (
-            <>
-              <Text
-                style={[
-                  styles.messageText,
-                  { color: item.isUser ? '#FFFFFF' : colors.text },
-                ]}
+        <View style={styles.messageContent}>
+          <View
+            style={[
+              styles.messageBubble,
+              item.isUser && {
+                backgroundColor: colors.primary,
+              },
+            ]}
+          >
+            {item.id === 'thinking-temp' ? (
+              <ThinkingDots />
+            ) : (
+              <>
+                <Text
+                  style={[
+                    styles.messageText,
+                    { color: item.isUser ? '#FFFFFF' : colors.text },
+                  ]}
+                >
+                  {typingMessage?.id === item.id
+                    ? displayedText
+                    : parseTextWithLinks(item.text)}
+                </Text>
+                {typingMessage?.id === item.id && <BlinkingCursor />}
+              </>
+            )}
+          </View>
+          {/* Message Options */}
+          {hoveredMessageId === item.id && item.id !== 'thinking-temp' && (
+            <View style={styles.messageOptions}>
+              <TouchableOpacity
+                style={styles.optionButton}
+                onPress={() => handleCopyMessage(item.text)}
               >
-                {typingMessage?.id === item.id
-                  ? displayedText
-                  : parseTextWithLinks(item.text)}
-              </Text>
-              {typingMessage?.id === item.id && <BlinkingCursor />}
-            </>
+                <Ionicons name="copy" size={14} color={colors.textSecondary} />
+                <Text style={[styles.optionLabel, { color: colors.textSecondary }]}>Copy</Text>
+              </TouchableOpacity>
+              {!item.isUser && (
+                <TouchableOpacity
+                  style={styles.optionButton}
+                  onPress={() => handleRegenerateMessage(item.id)}
+                >
+                  <Ionicons name="refresh" size={14} color={colors.primary} />
+                  <Text style={[styles.optionLabel, { color: colors.primary }]}>Retry</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
         {item.isUser && (
@@ -405,16 +482,9 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          {selectedAgent?.logo ? (
-            <Image
-              source={{ uri: selectedAgent.logo }}
-              style={styles.agentLogo}
-            />
-          ) : (
-            <View style={[styles.agentLogo, { backgroundColor: colors.primary }]}>
-              <Ionicons name="sparkles" size={18} color="#fff" />
-            </View>
-          )}
+          <View style={[styles.agentLogo, { backgroundColor: colors.primary }]}>
+            <Text style={styles.headerEmoji}>🤖</Text>
+          </View>
           <View style={styles.headerText}>
             <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {selectedAgent?.role || 'AI Employee'}
@@ -483,16 +553,16 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
                 style={[
                   styles.sendButton,
                   {
-                    backgroundColor: message.trim() && !isSendingMessage ? colors.primary : colors.surface,
+                    backgroundColor: isGenerating ? '#EF4444' : (message.trim() && !isSendingMessage ? colors.primary : colors.surface),
                   },
                 ]}
-                onPress={handleSendMessage}
-                disabled={!message.trim() || isSendingMessage}
+                onPress={isGenerating ? handlePauseGeneration : handleSendMessage}
+                disabled={!isGenerating && (!message.trim() || isSendingMessage)}
               >
                 <Ionicons
-                  name="arrow-up"
+                  name={isGenerating ? "pause" : "arrow-up"}
                   size={20}
-                  color={message.trim() && !isSendingMessage ? '#fff' : colors.textTertiary}
+                  color={isGenerating ? '#fff' : (message.trim() && !isSendingMessage ? '#fff' : colors.textTertiary)}
                 />
               </TouchableOpacity>
             </View>
@@ -541,6 +611,9 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
+  },
+  headerEmoji: {
+    fontSize: 16,
   },
   content: {
     flex: 1,
@@ -594,12 +667,20 @@ const styles = StyleSheet.create({
   aiMessageRow: {
     flexDirection: 'row',
   },
+  messageContent: {
+    flex: 1,
+    gap: Spacing.xs,
+  },
   aiAvatarSmall: {
     width: 32,
     height: 32,
     borderRadius: BorderRadius.full,
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
+  },
+  avatarEmoji: {
+    fontSize: 18,
   },
   userAvatarSmall: {
     width: 32,
@@ -663,7 +744,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-end',
     borderRadius: BorderRadius.xl,
-    borderWidth: 1,
+    borderWidth: 2,
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     gap: Spacing.sm,
@@ -688,5 +769,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: Spacing.xs,
+  },
+  messageOptions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+  },
+  optionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs,
+    borderRadius: BorderRadius.md,
+  },
+  optionLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
   },
 });

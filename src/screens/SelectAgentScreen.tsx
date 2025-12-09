@@ -9,6 +9,7 @@ import {
   Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { CommonActions } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RouteProp } from '@react-navigation/native';
@@ -109,13 +110,22 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
     try {
       const newAgent = await createAgent(businessId, agent.name);
       showToast(`${agent.name} hired successfully!`, 'success');
-      navigation.reset({
-        index: 1,
-        routes: [
-          { name: 'MainTabs' },
-          { name: 'Home' },
-        ],
-      });
+      // Use CommonActions to reset the navigation stack and go to Agents tab
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [
+            {
+              name: 'MainTabs',
+              state: {
+                routes: [
+                  { name: 'Agents' },
+                ],
+              },
+            },
+          ],
+        })
+      );
     } catch (error: any) {
       showToast(error.message || 'Failed to create agent', 'error');
     } finally {

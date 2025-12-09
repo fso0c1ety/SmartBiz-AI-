@@ -2,6 +2,7 @@ import { create } from 'zustand';
 
 export interface AIAgent {
   id: string;
+  businessId?: string;
   businessName: string;
   industry: string;
   description: string;

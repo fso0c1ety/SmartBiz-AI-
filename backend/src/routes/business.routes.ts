@@ -17,7 +17,7 @@ const createValidation = [
   body('targetAudience').optional().trim(),
   body('brandTone').optional().trim(),
   body('socialLinks').optional().isObject(),
-  body('logoUrl').optional().isURL(),
+  body('logoUrl').optional().isString(),
   body('brandColors').optional().isObject(),
   body('goals').optional().isArray(),
 ];
@@ -30,7 +30,7 @@ const updateValidation = [
   body('targetAudience').optional().trim(),
   body('brandTone').optional().trim(),
   body('socialLinks').optional().isObject(),
-  body('logoUrl').optional().isURL(),
+  body('logoUrl').optional().isString(),
   body('brandColors').optional().isObject(),
   body('goals').optional().isArray(),
 ];
