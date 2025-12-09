@@ -45,6 +45,21 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
   const { sendMessage: sendApiMessage, getMessages } = useApi();
   const { showToast } = useToastStore();
 
+  const agentLogoSources: Record<string, any> = {
+    alex: require('../../assets/robot1.jpg'),
+    jordan: require('../../assets/robot2.jpg'),
+    taylor: require('../../assets/robot3.jpg'),
+    morgan: require('../../assets/robot4.jpg'),
+    casey: require('../../assets/robot5.jpg'),
+    default: require('../../assets/robot1.jpg'),
+  };
+
+  const getAgentLogoSource = () => {
+    if (selectedAgent?.logo) return { uri: selectedAgent.logo };
+    const key = selectedAgent?.name?.toLowerCase() || selectedAgent?.role?.toLowerCase();
+    return (key && agentLogoSources[key]) || agentLogoSources.default;
+  };
+
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(false);
@@ -408,9 +423,10 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         onTouchCancel={() => setHoveredMessageId(null)}
       >
         {!item.isUser && (
-          <View style={[styles.aiAvatarSmall, { backgroundColor: colors.primary }]}>
-            <Text style={styles.avatarEmoji}>🤖</Text>
-          </View>
+          <Image
+            source={getAgentLogoSource()}
+            style={styles.aiAvatarSmall}
+          />
         )}
         <View style={styles.messageContent}>
           <View
@@ -482,16 +498,10 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          {selectedAgent?.logo ? (
-            <Image
-              source={{ uri: selectedAgent.logo }}
-              style={styles.agentLogo}
-            />
-          ) : (
-            <View style={[styles.agentLogo, { backgroundColor: colors.primary }]}>
-              <Ionicons name="sparkles" size={18} color="#fff" />
-            </View>
-          )}
+          <Image
+            source={getAgentLogoSource()}
+            style={styles.agentLogo}
+          />
           <View style={styles.headerText}>
             <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {selectedAgent?.role || 'AI Employee'}
@@ -682,6 +692,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+    resizeMode: 'cover',
   },
   avatarEmoji: {
     fontSize: 18,

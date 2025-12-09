@@ -35,6 +35,14 @@ interface Agent {
   niche: string;
 }
 
+const AGENT_IMAGES = [
+  require('../../assets/robot1.jpg'),
+  require('../../assets/robot2.jpg'),
+  require('../../assets/robot3.jpg'),
+  require('../../assets/robot4.jpg'),
+  require('../../assets/robot5.jpg'),
+];
+
 const AVAILABLE_AGENTS: Agent[] = [
   {
     id: 'alex-universal-1',
@@ -133,7 +141,7 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
     }
   };
 
-  const renderAgent = ({ item }: { item: Agent }) => (
+  const renderAgent = ({ item, index }: { item: Agent; index: number }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => handleSelectAgent(item)}
@@ -143,14 +151,17 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
       <Animated.View style={{ opacity: fadeAnim }}>
         <View style={[styles.agentCard, { backgroundColor: colors.card }]}>
           <View style={styles.cardInner}>
-            {/* Robot Avatar with Mini Robot */}
+            {/* Avatar with uploaded robot image */}
             <View
               style={[
                 styles.avatar,
                 { backgroundColor: item.color },
               ]}
             >
-              <Text style={styles.robotEmoji}>🤖</Text>
+              <Image
+                source={AGENT_IMAGES[index % AGENT_IMAGES.length]}
+                style={styles.avatarImage}
+              />
             </View>
 
             {/* Agent details */}
@@ -255,8 +266,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  robotEmoji: {
-    fontSize: 28,
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BorderRadius.full,
+    resizeMode: 'cover',
   },
   details: {
     flex: 1,

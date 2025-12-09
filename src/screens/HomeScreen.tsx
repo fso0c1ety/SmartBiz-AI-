@@ -23,6 +23,14 @@ import { useApi } from '../hooks/useApi';
 import { useToastStore } from '../store/useToastStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
+const AGENT_IMAGES = [
+  require('../../assets/robot1.jpg'),
+  require('../../assets/robot2.jpg'),
+  require('../../assets/robot3.jpg'),
+  require('../../assets/robot4.jpg'),
+  require('../../assets/robot5.jpg'),
+];
+
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
@@ -117,7 +125,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
     navigation.navigate('AgentWorkspace');
   };
 
-  const renderAgentCard = ({ item }: { item: AIAgent }) => (
+  const renderAgentCard = ({ item, index }: { item: AIAgent; index: number }) => (
     <TouchableOpacity
       activeOpacity={0.8}
       onPress={() => handleAgentPress(item)}
@@ -129,14 +137,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {/* Agent header */}
             <View style={styles.agentHeader}>
               <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-                {item.logo ? (
-                  <Image
-                    source={{ uri: item.logo }}
-                    style={styles.logoImage}
-                  />
-                ) : (
-                  <Ionicons name="sparkles" size={22} color={colors.primary} />
-                )}
+                <Image
+                  source={item.logo ? { uri: item.logo } : AGENT_IMAGES[index % AGENT_IMAGES.length]}
+                  style={styles.logoImage}
+                />
               </View>
               <View style={styles.agentInfo}>
                 <Text style={[styles.roleName, { color: colors.text }]} numberOfLines={1}>
@@ -350,6 +354,7 @@ const styles = StyleSheet.create({
   logoImage: {
     width: '100%',
     height: '100%',
+    resizeMode: 'cover',
   },
   agentInfo: {
     flex: 1,
