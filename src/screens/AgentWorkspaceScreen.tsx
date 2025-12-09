@@ -482,9 +482,16 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <View style={[styles.agentLogo, { backgroundColor: colors.primary }]}>
-            <Text style={styles.headerEmoji}>🤖</Text>
-          </View>
+          {selectedAgent?.logo ? (
+            <Image
+              source={{ uri: selectedAgent.logo }}
+              style={styles.agentLogo}
+            />
+          ) : (
+            <View style={[styles.agentLogo, { backgroundColor: colors.primary }]}>
+              <Ionicons name="sparkles" size={18} color="#fff" />
+            </View>
+          )}
           <View style={styles.headerText}>
             <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {selectedAgent?.role || 'AI Employee'}
@@ -611,9 +618,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: FontSize.base,
     fontWeight: FontWeight.semibold,
-  },
-  headerEmoji: {
-    fontSize: 16,
   },
   content: {
     flex: 1,

@@ -128,8 +128,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
           <View style={styles.cardContent}>
             {/* Agent header */}
             <View style={styles.agentHeader}>
-              <View style={[styles.avatar, { backgroundColor: colors.primary }]}>
-                <Text style={styles.robotEmoji}>🤖</Text>
+              <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
+                {item.logo ? (
+                  <Image
+                    source={{ uri: item.logo }}
+                    style={styles.logoImage}
+                  />
+                ) : (
+                  <Ionicons name="sparkles" size={22} color={colors.primary} />
+                )}
               </View>
               <View style={styles.agentInfo}>
                 <Text style={[styles.roleName, { color: colors.text }]} numberOfLines={1}>
@@ -339,9 +346,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
-  },
-  robotEmoji: {
-    fontSize: 24,
   },
   logoImage: {
     width: '100%',

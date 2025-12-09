@@ -125,7 +125,6 @@ export const SetupBusinessScreen: React.FC<SetupBusinessScreenProps> = ({ naviga
           targetAudience: targetAudience.trim() || 'Not provided',
           goals: teamSize ? [`Team size: ${teamSize}`] : [],
           brandTone: 'professional',
-          logoUrl: logoUri || undefined,
         });
 
         showToast('Business setup complete!', 'success');
