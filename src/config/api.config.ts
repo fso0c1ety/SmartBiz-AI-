@@ -19,8 +19,11 @@ const getApiUrl = (): string => {
 
   // Development URLs (choose one based on your setup)
   if (isDevelopment) {
+    // Using deployed Render backend for testing
+    return 'https://smartbiz-ai.onrender.com/api';
+    
     // Option 1: Local machine IP (for physical device/emulator)
-    return 'http://192.168.0.27:5001/api';
+    // return 'http://192.168.0.27:5001/api';
     
     // Option 2: localhost (for iOS simulator/Android emulator only)
     // return 'http://localhost:5001/api';

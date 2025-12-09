@@ -12,13 +12,20 @@ router.use(authMiddleware);
 // Content generation validation
 const generateValidation = [
   body('type')
-    .isIn(['post', 'caption', 'ad', 'blog', 'email'])
+    .isIn(['post', 'caption', 'ad', 'blog', 'email', 'image'])
     .withMessage('Valid content type is required'),
   body('prompt').trim().notEmpty().withMessage('Prompt is required'),
 ];
 
+// Image generation validation
+const imageValidation = [
+  body('prompt').trim().notEmpty().withMessage('Prompt is required'),
+  body('size').optional().isIn(['1024x1024', '512x512', '256x256']).withMessage('Invalid size'),
+];
+
 // Routes
 router.post('/:id/content/create', validate(generateValidation), ContentController.generate);
+router.post('/:id/image/generate', validate(imageValidation), ContentController.generateImage);
 router.get('/:id/content/all', ContentController.getAll);
 
 export default router;

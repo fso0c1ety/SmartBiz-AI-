@@ -91,9 +91,16 @@ export interface ChatInput {
 
 export interface ContentGenerationInput {
   agentId: string;
-  type: string; // "post", "caption", "ad", "blog", etc.
+  type: string; // "post", "caption", "ad", "blog", "image", etc.
   prompt: string;
   userId: string;
+}
+
+export interface ImageGenerationInput {
+  agentId: string;
+  prompt: string;
+  userId: string;
+  size?: '1024x1024' | '512x512' | '256x256';
 }
 
 export class AIService {
@@ -111,10 +118,58 @@ export class AIService {
         id: agentId,
         business: { userId },
       },
+      include: { business: true },
     });
 
     if (!agent) {
       throw new Error('Agent not found');
+    }
+
+    // Check if user is requesting image generation
+    const imageKeywords = /\b(generate|create|make|design|draw)\s+(a|an|the|me|my)?\s*(logo|image|picture|graphic|illustration|banner|poster|icon)/i;
+    const isImageRequest = imageKeywords.test(message);
+
+    if (isImageRequest) {
+      // Extract the image description from the message
+      const imagePrompt = message.replace(/^(please|can you|could you|i want you to|i need you to)\s+/i, '').trim();
+      
+      try {
+        // Generate the image
+        const imageResult = await this.generateImage({
+          agentId,
+          prompt: imagePrompt,
+          userId,
+        });
+
+        // Store user message
+        await prisma.message.create({
+          data: {
+            agentId,
+            role: 'user',
+            message,
+          },
+        });
+
+        // Create assistant response with image
+        const assistantMessage = `I've generated the image for you! Here it is:\n\n${imageResult.imageUrl}`;
+        
+        await prisma.message.create({
+          data: {
+            agentId,
+            role: 'assistant',
+            message: assistantMessage,
+          },
+        });
+
+        return {
+          message: assistantMessage,
+          imageUrl: imageResult.imageUrl,
+          usage: null,
+        };
+      } catch (error: any) {
+        // If image generation fails, fall back to text response
+        console.error('Image generation failed:', error.message);
+      }
     }
 
     // Store user message
@@ -339,5 +394,60 @@ export class AIService {
     });
 
     return contents;
+  }
+
+  /**
+   * Generate AI image using external API
+   * Using Pollinations.ai (free, no API key needed) or DeepSeek
+   */
+  static async generateImage(input: ImageGenerationInput) {
+    const { agentId, prompt, userId, size = '1024x1024' } = input;
+
+    // Verify agent ownership
+    const agent = await prisma.agent.findFirst({
+      where: {
+        id: agentId,
+        business: { userId },
+      },
+      include: { business: true },
+    });
+
+    if (!agent) {
+      throw new Error('Agent not found');
+    }
+
+    // Enhance prompt with business context
+    const enhancedPrompt = `${prompt}. Brand: ${agent.business.name}. Style: ${agent.business.brandTone || 'professional'}`;
+
+    try {
+      // Using Pollinations.ai - free AI image generation
+      const encodedPrompt = encodeURIComponent(enhancedPrompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size.split('x')[0]}&height=${size.split('x')[1]}&nologo=true`;
+
+      // Store generated image reference
+      const content = await prisma.content.create({
+        data: {
+          agentId,
+          type: 'image',
+          data: JSON.stringify({
+            prompt: enhancedPrompt,
+            imageUrl,
+            size,
+            businessName: agent.business.name,
+            generatedAt: new Date().toISOString(),
+            provider: 'Pollinations.ai',
+          }),
+        },
+      });
+
+      return {
+        content,
+        imageUrl,
+        usage: null,
+      };
+    } catch (err: any) {
+      console.error('❌ Image generation error:', err.message);
+      throw new Error('Failed to generate image: ' + err.message);
+    }
   }
 }

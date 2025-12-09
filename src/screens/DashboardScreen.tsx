@@ -155,12 +155,6 @@ export const DashboardScreen: React.FC<DashboardScreenProps> = ({ navigation }) 
 
         <View style={styles.bottomSpacer} />
       </ScrollView>
-
-      {/* Floating Action Button */}
-      <FloatingActionButton
-        onPress={() => navigation.navigate('CreateAgent')}
-        icon="add"
-      />
     </SafeAreaView>
   );
 };
