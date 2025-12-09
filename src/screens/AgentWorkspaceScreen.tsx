@@ -10,6 +10,7 @@ import {
   Platform,
   Animated,
   Image,
+  Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -316,6 +317,34 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
       );
     }
 
+    // Parse text for URLs and render as clickable links
+    const parseTextWithLinks = (text: string) => {
+      const urlRegex = /(https?:\/\/[^\s]+)/g;
+      const parts = text.split(urlRegex);
+      
+      return parts.map((part, index) => {
+        if (urlRegex.test(part)) {
+          return (
+            <Text
+              key={index}
+              style={[
+                styles.linkText,
+                { color: item.isUser ? '#FFFFFF' : colors.primary },
+              ]}
+              onPress={() => {
+                Linking.openURL(part).catch(err =>
+                  console.error('Failed to open URL:', err)
+                );
+              }}
+            >
+              {part}
+            </Text>
+          );
+        }
+        return <Text key={index}>{part}</Text>;
+      });
+    };
+
     // Regular text message rendering
     return (
       <View
@@ -347,7 +376,9 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
                   { color: item.isUser ? '#FFFFFF' : colors.text },
                 ]}
               >
-                {typingMessage?.id === item.id ? displayedText : item.text}
+                {typingMessage?.id === item.id
+                  ? displayedText
+                  : parseTextWithLinks(item.text)}
               </Text>
               {typingMessage?.id === item.id && <BlinkingCursor />}
             </>
@@ -586,6 +617,10 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: FontSize.base,
     lineHeight: 24,
+  },
+  linkText: {
+    textDecorationLine: 'underline',
+    fontWeight: '600',
   },
   imageContainer: {
     marginTop: Spacing.sm,

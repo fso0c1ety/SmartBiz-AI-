@@ -6,6 +6,7 @@ import {
   TouchableOpacity,
   FlatList,
   Animated,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -35,49 +36,49 @@ interface Agent {
 
 const AVAILABLE_AGENTS: Agent[] = [
   {
-    id: 'sydney-marketing',
-    name: 'Sydney',
-    role: 'Marketing Expert',
-    description: 'Specialist in marketing strategies, content creation, and campaign planning',
-    icon: 'megaphone',
-    color: '#FF6B6B',
-    niche: 'Marketing',
-  },
-  {
-    id: 'alex-email',
+    id: 'alex-universal-1',
     name: 'Alex',
-    role: 'Email Marketing',
-    description: 'Expert in email campaigns, automation, and customer engagement',
-    icon: 'mail',
-    color: '#4ECDC4',
-    niche: 'Email',
+    role: 'Universal Assistant',
+    description: 'A versatile AI that can help with any task, from content to strategy and everything in between',
+    icon: 'sparkles',
+    color: '#FF6B6B',
+    niche: 'Universal',
   },
   {
-    id: 'jordan-social',
+    id: 'jordan-universal-2',
     name: 'Jordan',
-    role: 'Social Media Guru',
-    description: 'Specialist in social media management, growth, and engagement',
-    icon: 'share-social',
-    color: '#45B7D1',
-    niche: 'Social',
+    role: 'Creative Genius',
+    description: 'Unlimited creativity and idea generation - perfect for brainstorming, design, and innovation',
+    icon: 'bulb',
+    color: '#4ECDC4',
+    niche: 'Creative',
   },
   {
-    id: 'taylor-content',
+    id: 'taylor-universal-3',
     name: 'Taylor',
-    role: 'Content Strategist',
-    description: 'Expert in content creation, blogging, and storytelling for brands',
-    icon: 'create',
-    color: '#9B59B6',
-    niche: 'Content',
+    role: 'Growth Specialist',
+    description: 'Master of growth strategies, optimization, and scaling - applies to any business goal',
+    icon: 'trending-up',
+    color: '#45B7D1',
+    niche: 'Growth',
   },
   {
-    id: 'morgan-sales',
+    id: 'morgan-universal-4',
     name: 'Morgan',
-    role: 'Sales Strategist',
-    description: 'Specialist in sales funnels, conversion optimization, and revenue growth',
-    icon: 'trending-up',
+    role: 'Multi-Purpose Expert',
+    description: 'Jack of all trades - adapts to whatever your business needs most right now',
+    icon: 'cog',
+    color: '#9B59B6',
+    niche: 'Multi-Purpose',
+  },
+  {
+    id: 'casey-universal-5',
+    name: 'Casey',
+    role: 'Smart Analyst',
+    description: 'Data-driven insights and strategic analysis for any business challenge or opportunity',
+    icon: 'analytics',
     color: '#F39C12',
-    niche: 'Sales',
+    niche: 'Analysis',
   },
 ];
 
@@ -126,18 +127,14 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
       <Animated.View style={{ opacity: fadeAnim }}>
         <View style={[styles.agentCard, { backgroundColor: colors.card }]}>
           <View style={styles.cardInner}>
-            {/* Agent avatar */}
+            {/* Robot Avatar with Mini Robot */}
             <View
               style={[
                 styles.avatar,
-                { backgroundColor: colors.surface },
+                { backgroundColor: item.color },
               ]}
             >
-              <Ionicons
-                name={item.icon as any}
-                size={24}
-                color={colors.primary}
-              />
+              <Text style={styles.robotEmoji}>🤖</Text>
             </View>
 
             {/* Agent details */}
@@ -146,7 +143,7 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
                 {item.name}
               </Text>
               <Text
-                style={[styles.agentRole, { color: colors.textSecondary }]}
+                style={[styles.agentRole, { color: item.color }]}
               >
                 {item.role}
               </Text>
@@ -241,6 +238,9 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  robotEmoji: {
+    fontSize: 28,
   },
   details: {
     flex: 1,
