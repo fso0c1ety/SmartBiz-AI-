@@ -34,7 +34,7 @@ const getApiUrl = (): string => {
 
   // Production URL (replace with your deployed backend)
   // Option 1: Render (Free tier)
-  return 'https://smartbiz-ai-backend.onrender.com/api';
+  return 'https://smartbiz-ai.onrender.com/api';
   
   // Option 2: Railway (Paid)
   // return 'https://smartbiz-ai-railway.up.railway.app/api';
