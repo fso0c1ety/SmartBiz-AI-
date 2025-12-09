@@ -87,7 +87,13 @@ export const AgentOnboardingScreen: React.FC<AgentOnboardingScreenProps> = ({
       const newAgent = await createAgent(newBusiness.id, agent.name);
 
       showToast(`${agent.name} is ready to help!`, 'success');
-      navigation.replace('AgentWorkspace', { agentId: newAgent.id });
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: 'MainTabs' },
+          { name: 'Home' },
+        ],
+      });
     } catch (error: any) {
       showToast(error.message || 'Failed to create agent', 'error');
     } finally {

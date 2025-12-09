@@ -109,7 +109,13 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
     try {
       const newAgent = await createAgent(businessId, agent.name);
       showToast(`${agent.name} hired successfully!`, 'success');
-      navigation.replace('AgentWorkspace', { agentId: newAgent.id });
+      navigation.reset({
+        index: 1,
+        routes: [
+          { name: 'MainTabs' },
+          { name: 'Home' },
+        ],
+      });
     } catch (error: any) {
       showToast(error.message || 'Failed to create agent', 'error');
     } finally {
