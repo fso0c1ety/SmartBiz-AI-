@@ -126,12 +126,14 @@ export class AIService {
     }
 
     // Check if user is requesting image generation
-    const imageKeywords = /\b(generate|create|make|design|draw)\s+(a|an|the|me|my)?\s*(logo|image|picture|graphic|illustration|banner|poster|icon)/i;
+    const imageKeywords = /\b(generate|create|make|design|draw)\s+(a|an|the|me|my)?\s*(logo|image|picture|graphic|illustration|banner|poster|icon|photo|artwork|design)\b/i;
     const isImageRequest = imageKeywords.test(message);
 
     if (isImageRequest) {
       // Extract the image description from the message
-      const imagePrompt = message.replace(/^(please|can you|could you|i want you to|i need you to)\s+/i, '').trim();
+      const imagePrompt = message.replace(/^(please|can you|could you|i want you to|i need you to|do that)\s+/i, '').trim();
+      
+      console.log('🎨 Image request detected:', imagePrompt);
       
       try {
         // Generate the image
@@ -140,6 +142,8 @@ export class AIService {
           prompt: imagePrompt,
           userId,
         });
+
+        console.log('✅ Image generated:', imageResult.imageUrl);
 
         // Store user message
         await prisma.message.create({
@@ -150,8 +154,8 @@ export class AIService {
           },
         });
 
-        // Create assistant response with image
-        const assistantMessage = `I've generated the image for you! Here it is:\n\n${imageResult.imageUrl}`;
+        // Create assistant response with structured image data
+        const assistantMessage = `I've created a professional image for your brand.`;
         
         await prisma.message.create({
           data: {
@@ -163,12 +167,14 @@ export class AIService {
 
         return {
           message: assistantMessage,
+          type: 'image',
           imageUrl: imageResult.imageUrl,
+          imagePrompt: imagePrompt,
           usage: null,
         };
       } catch (error: any) {
         // If image generation fails, fall back to text response
-        console.error('Image generation failed:', error.message);
+        console.error('❌ Image generation failed:', error.message);
       }
     }
 

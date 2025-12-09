@@ -31,6 +31,8 @@ interface Message {
   text: string;
   isUser: boolean;
   timestamp: Date;
+  imageUrl?: string;
+  type?: 'text' | 'image';
 }
 
 export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
@@ -127,6 +129,8 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         text: response.message,
         isUser: false,
         timestamp: new Date(),
+        imageUrl: response.imageUrl,
+        type: response.type || 'text',
       };
 
       // Add AI message and start typing animation
@@ -267,49 +271,96 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
     );
   };
 
-  const renderMessage = ({ item }: { item: Message }) => (
-    <View
-      style={[
-        styles.messageRow,
-        item.isUser ? styles.userMessageRow : styles.aiMessageRow,
-      ]}
-    >
-      {!item.isUser && (
-        <View style={[styles.aiAvatarSmall, { backgroundColor: colors.primary }]}>
-          <Ionicons name="sparkles" size={14} color="#fff" />
-        </View>
-      )}
-      <View
-        style={[
-          styles.messageBubble,
-          item.isUser && {
-            backgroundColor: colors.primary,
-          },
-        ]}
-      >
-        {item.id === 'thinking-temp' ? (
-          <ThinkingDots />
-        ) : (
-          <>
+  const renderMessage = ({ item }: { item: Message }) => {
+    // If it's an image type message, render it as an image
+    if (item.type === 'image' && item.imageUrl) {
+      return (
+        <View
+          style={[
+            styles.messageRow,
+            item.isUser ? styles.userMessageRow : styles.aiMessageRow,
+          ]}
+        >
+          {!item.isUser && (
+            <View style={[styles.aiAvatarSmall, { backgroundColor: colors.primary }]}>
+              <Ionicons name="sparkles" size={14} color="#fff" />
+            </View>
+          )}
+          <View
+            style={[
+              styles.messageBubble,
+              item.isUser && { backgroundColor: colors.primary },
+            ]}
+          >
             <Text
               style={[
                 styles.messageText,
                 { color: item.isUser ? '#FFFFFF' : colors.text },
               ]}
             >
-              {typingMessage?.id === item.id ? displayedText : item.text}
+              {item.text}
             </Text>
-            {typingMessage?.id === item.id && <BlinkingCursor />}
-          </>
+            <Image
+              source={{ uri: item.imageUrl }}
+              style={styles.generatedImage}
+              onError={(e) => console.log('❌ Image load error:', e)}
+              onLoad={() => console.log('✅ Image loaded successfully')}
+            />
+          </View>
+          {item.isUser && (
+            <View style={[styles.userAvatarSmall, { backgroundColor: colors.secondary }]}>
+              <Ionicons name="person" size={14} color="#fff" />
+            </View>
+          )}
+        </View>
+      );
+    }
+
+    // Regular text message rendering
+    return (
+      <View
+        style={[
+          styles.messageRow,
+          item.isUser ? styles.userMessageRow : styles.aiMessageRow,
+        ]}
+      >
+        {!item.isUser && (
+          <View style={[styles.aiAvatarSmall, { backgroundColor: colors.primary }]}>
+            <Ionicons name="sparkles" size={14} color="#fff" />
+          </View>
+        )}
+        <View
+          style={[
+            styles.messageBubble,
+            item.isUser && {
+              backgroundColor: colors.primary,
+            },
+          ]}
+        >
+          {item.id === 'thinking-temp' ? (
+            <ThinkingDots />
+          ) : (
+            <>
+              <Text
+                style={[
+                  styles.messageText,
+                  { color: item.isUser ? '#FFFFFF' : colors.text },
+                ]}
+              >
+                {typingMessage?.id === item.id ? displayedText : item.text}
+              </Text>
+              {typingMessage?.id === item.id && <BlinkingCursor />}
+            </>
+          )}
+        </View>
+        {item.isUser && (
+          <View style={[styles.userAvatarSmall, { backgroundColor: colors.secondary }]}>
+            <Ionicons name="person" size={14} color="#fff" />
+          </View>
         )}
       </View>
-      {item.isUser && (
-        <View style={[styles.userAvatarSmall, { backgroundColor: colors.secondary }]}>
-          <Ionicons name="person" size={14} color="#fff" />
-        </View>
-      )}
-    </View>
-  );
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -531,14 +582,20 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.md,
     paddingHorizontal: Spacing.lg,
     borderRadius: BorderRadius.lg,
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    flexWrap: 'wrap',
   },
   messageText: {
     fontSize: FontSize.base,
     lineHeight: 24,
-    flexShrink: 1,
+  },
+  imageContainer: {
+    marginTop: Spacing.sm,
+    gap: Spacing.sm,
+  },
+  generatedImage: {
+    width: 250,
+    height: 250,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.sm,
   },
   thinkingContainer: {
     flexDirection: 'row',
