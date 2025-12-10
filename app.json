@@ -36,7 +36,10 @@
       "expo-document-picker"
     ],
     "extra": {
-      "eas": {}
-    }
+      "eas": {
+        "projectId": "eef2dcb5-be91-48cb-9d32-59ddb45f8aaf"
+      }
+    },
+    "owner": "valon112"
   }
 }
