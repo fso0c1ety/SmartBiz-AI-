@@ -3,6 +3,7 @@ import { View, StyleSheet, Platform, TouchableOpacity, Text } from 'react-native
 import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Colors } from '../constants/colors';
 import { useThemeStore } from '../store/useThemeStore';
 import { BorderRadius } from '../constants/spacing';
 
@@ -24,6 +25,8 @@ const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: 
 const GlassTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const { colorScheme } = useThemeStore();
   const isDark = colorScheme === 'dark';
+  const palette = Colors[colorScheme];
+  const activeGradient = ['#FF6B5B', '#FFA14A'];
 
   return (
     <View style={styles.wrapper}>
@@ -83,21 +86,37 @@ const GlassTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigati
               style={styles.tab}
               activeOpacity={0.8}
             >
-              <View style={styles.iconContainer}>
-                {isFocused && (
-                  <LinearGradient
-                    colors={['#FF6B5B', '#FFA14A']}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                    style={styles.activePill}
+              <View style={styles.itemInner}>
+                <View style={[styles.iconShell, isFocused && styles.iconShellActive]}>
+                  {isFocused && (
+                    <LinearGradient
+                      colors={activeGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                  )}
+                  <Ionicons
+                    name={iconName}
+                    size={isFocused ? 30 : 24}
+                    color={isFocused ? '#FFFFFF' : '#F0F0F0'}
                   />
-                )}
-                <Ionicons name={iconName} size={24} color="#FFFFFF" />
-                {isFocused && <Text style={styles.label}>{label}</Text>}
+                </View>
+                <Text style={[styles.label, { color: isFocused ? activeGradient[0] : '#E6E6E6' }]}>
+                  {label}
+                </Text>
               </View>
             </TouchableOpacity>
           );
         })}
+      </View>
+      <View style={styles.progressTrack}>
+        <LinearGradient
+          colors={activeGradient}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 0 }}
+          style={styles.progressThumb}
+        />
       </View>
     </View>
   );
@@ -193,24 +212,40 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 28,
   },
-  iconContainer: {
-    minWidth: 56,
-    minHeight: 40,
-    borderRadius: 24,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    flexDirection: 'row',
+  itemInner: {
     alignItems: 'center',
-    justifyContent: 'center',
     gap: 8,
   },
-  activePill: {
-    ...StyleSheet.absoluteFillObject,
-    borderRadius: 24,
+  iconShell: {
+    width: 72,
+    height: 72,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  iconShellActive: {
+    shadowColor: 'rgba(255,107,91,0.45)',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
   },
   label: {
-    color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 16,
     fontWeight: '700',
+  },
+  progressTrack: {
+    height: 12,
+    marginHorizontal: 32,
+    marginBottom: 10,
+    marginTop: 2,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    overflow: 'hidden',
+  },
+  progressThumb: {
+    flex: 1,
+    borderRadius: 12,
   },
 });
