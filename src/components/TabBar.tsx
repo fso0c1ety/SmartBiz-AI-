@@ -24,106 +24,107 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) 
 
   return (
     <LinearGradient
-      colors={colorScheme === 'dark' 
-        ? ['rgba(255, 107, 91, 0.1)', 'rgba(255, 161, 74, 0.05)']
-        : ['rgba(255, 107, 91, 0.08)', 'rgba(255, 161, 74, 0.04)']
-      }
+      colors={['#00D4FF', '#00A8FF', '#FF6B9D', '#FF4757']}
       start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+      end={{ x: 1, y: 0 }}
       style={[styles.container, { 
-        backgroundColor: colorScheme === 'dark' 
-          ? 'rgba(45, 37, 32, 0.7)'
-          : 'rgba(255, 249, 245, 0.7)',
         borderColor: colorScheme === 'dark'
-          ? 'rgba(255, 107, 91, 0.2)'
-          : 'rgba(255, 107, 91, 0.15)',
+          ? 'rgba(0, 212, 255, 0.3)'
+          : 'rgba(0, 212, 255, 0.2)',
       }]}
     >
-      {tabs.map((tab) => {
-        const isActive = activeTab === tab.key;
-        return (
-          <TouchableOpacity
-            key={tab.key}
-            style={[
-              styles.tab,
-              isActive && [
-                styles.activeTab,
-                {
-                  backgroundColor: colorScheme === 'dark'
-                    ? 'rgba(255, 107, 91, 0.3)'
-                    : 'rgba(255, 107, 91, 0.2)',
-                  borderColor: colors.primary,
-                },
-              ],
-            ]}
-            onPress={() => onTabChange(tab.key)}
-            activeOpacity={0.7}
-          >
-            {isActive && (
-              <LinearGradient
-                colors={['#FF6B5B', '#FFA14A']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-            )}
-            <View style={styles.tabContent}>
-              <Ionicons
-                name={tab.icon}
-                size={20}
-                color={isActive ? '#FFFFFF' : colors.textSecondary}
-              />
+      {/* Glassmorphism overlay */}
+      <View style={[styles.glassmorphismOverlay, {
+        backgroundColor: colorScheme === 'dark' 
+          ? 'rgba(30, 30, 40, 0.4)'
+          : 'rgba(255, 255, 255, 0.15)',
+      }]} />
+      
+      <View style={styles.tabsWrapper}>
+        {tabs.map((tab, index) => {
+          const isActive = activeTab === tab.key;
+          return (
+            <TouchableOpacity
+              key={tab.key}
+              style={[
+                styles.tab,
+                isActive && styles.activeTab,
+              ]}
+              onPress={() => onTabChange(tab.key)}
+              activeOpacity={0.7}
+            >
               {isActive && (
-                <Text
-                  style={[
-                    styles.label,
-                    { color: '#FFFFFF' },
-                  ]}
-                >
-                  {tab.label}
-                </Text>
+                <LinearGradient
+                  colors={['#FF6B5B', '#FFA14A']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
               )}
-            </View>
-          </TouchableOpacity>
-        );
-      })}
+              <View style={styles.tabContent}>
+                <Ionicons
+                  name={tab.icon}
+                  size={24}
+                  color={isActive ? '#FFFFFF' : '#FFFFFF'}
+                />
+                {isActive && (
+                  <Text
+                    style={[
+                      styles.label,
+                      { color: '#FFFFFF' },
+                    ]}
+                  >
+                    {tab.label}
+                  </Text>
+                )}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    flexDirection: 'row',
-    padding: Spacing.xs,
-    borderRadius: 50,
-    gap: Spacing.xs,
+    borderRadius: 40,
     borderWidth: 1,
-    backdropFilter: 'blur(10px)',
     overflow: 'hidden',
+    padding: 8,
+    flexDirection: 'row',
+  },
+  glassmorphismOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 40,
+  },
+  tabsWrapper: {
+    flexDirection: 'row',
+    flex: 1,
+    gap: 8,
+    zIndex: 1,
   },
   tab: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderRadius: 30,
-    gap: 6,
-    borderWidth: 1,
-    borderColor: 'transparent',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 25,
+    gap: 8,
   },
   activeTab: {
     shadowColor: '#FF6B5B',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 12,
   },
   tabContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   label: {
     fontSize: FontSize.sm,
