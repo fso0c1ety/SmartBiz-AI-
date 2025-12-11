@@ -1,11 +1,10 @@
 import React from 'react';
-import { View, StyleSheet, Platform } from 'react-native';
-import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
+import { View, StyleSheet, Platform, TouchableOpacity, Text } from 'react-native';
+import { createBottomTabNavigator, BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from '../constants/colors';
 import { useThemeStore } from '../store/useThemeStore';
-import { BorderRadius, Spacing } from '../constants/spacing';
+import { BorderRadius } from '../constants/spacing';
 
 // Screens
 import { DashboardScreen } from '../screens/DashboardScreen';
@@ -15,47 +14,100 @@ import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
 
-export const MainTabNavigator = () => {
+const ICONS: Record<string, { active: keyof typeof Ionicons.glyphMap; inactive: keyof typeof Ionicons.glyphMap }> = {
+  Dashboard: { active: 'grid', inactive: 'grid-outline' },
+  Agents: { active: 'people', inactive: 'people-outline' },
+  Content: { active: 'documents', inactive: 'documents-outline' },
+  Profile: { active: 'person', inactive: 'person-outline' },
+};
+
+const GlassTabBar: React.FC<BottomTabBarProps> = ({ state, descriptors, navigation }) => {
   const { colorScheme } = useThemeStore();
-  const colors = Colors[colorScheme];
+  const isDark = colorScheme === 'dark';
 
   return (
+    <View style={styles.wrapper}>
+      <LinearGradient
+        colors={['#00D4FF', '#00A8FF', '#FF6B9D', '#FF4757']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.gradientBg}
+      />
+      <View
+        style={[
+          styles.glassOverlay,
+          {
+            backgroundColor: isDark
+              ? 'rgba(20,20,26,0.55)'
+              : 'rgba(255,255,255,0.25)',
+            borderColor: isDark
+              ? 'rgba(255,255,255,0.08)'
+              : 'rgba(255,255,255,0.18)',
+          },
+        ]}
+      />
+      <View style={styles.tabRow}>
+        {state.routes.map((route, index) => {
+          const isFocused = state.index === index;
+          const options = descriptors[route.key]?.options || {};
+          const label =
+            options.tabBarLabel !== undefined
+              ? options.tabBarLabel
+              : options.title !== undefined
+              ? options.title
+              : route.name;
+
+          const iconSet = ICONS[route.name] || { active: 'ellipse', inactive: 'ellipse-outline' };
+          const iconName = isFocused ? iconSet.active : iconSet.inactive;
+
+          const onPress = () => {
+            const event = navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              navigation.navigate(route.name);
+            }
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              testID={options.tabBarTestID}
+              onPress={onPress}
+              style={styles.tab}
+              activeOpacity={0.8}
+            >
+              <View style={styles.iconContainer}>
+                {isFocused && (
+                  <LinearGradient
+                    colors={['#FF6B5B', '#FFA14A']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.activePill}
+                  />
+                )}
+                <Ionicons name={iconName} size={24} color="#FFFFFF" />
+                {isFocused && <Text style={styles.label}>{label}</Text>}
+              </View>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
+export const MainTabNavigator = () => {
+  return (
     <Tab.Navigator
-      screenOptions={{
-        headerShown: false,
-        tabBarStyle: {
-          backgroundColor: 'transparent',
-          borderTopWidth: 1,
-          borderTopColor: 'rgba(0, 212, 255, 0.2)',
-          elevation: 0,
-          shadowOpacity: 0,
-          height: Platform.OS === 'ios' ? 88 : 65,
-          paddingBottom: Platform.OS === 'ios' ? 24 : 8,
-          paddingTop: 8,
-          marginHorizontal: 12,
-          marginBottom: Platform.OS === 'ios' ? 8 : 4,
-          borderRadius: 40,
-          overflow: 'hidden',
-        },
-        tabBarBackground: () => (
-          <LinearGradient
-            colors={['#00D4FF', '#00A8FF', '#FF6B9D', '#FF4757']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={StyleSheet.absoluteFillObject}
-          />
-        ),
-        tabBarActiveTintColor: '#FFFFFF',
-        tabBarInactiveTintColor: '#FFFFFF',
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-          marginTop: -4,
-        },
-        tabBarIconStyle: {
-          marginTop: 4,
-        },
-      }}
+      screenOptions={{ headerShown: false }}
+      tabBar={(props) => <GlassTabBar {...props} />}
     >
       <Tab.Screen
         name="Dashboard"
@@ -63,14 +115,6 @@ export const MainTabNavigator = () => {
         options={{
           tabBarIcon: ({ color, size, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
-              {focused && (
-                <LinearGradient
-                  colors={['#FF6B5B', '#FFA14A']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.activeIconBg}
-                />
-              )}
               <Ionicons name={focused ? 'grid' : 'grid-outline'} size={size} color={color} />
             </View>
           ),
@@ -84,14 +128,6 @@ export const MainTabNavigator = () => {
         options={{
           tabBarIcon: ({ color, size, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
-              {focused && (
-                <LinearGradient
-                  colors={['#FF6B5B', '#FFA14A']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.activeIconBg}
-                />
-              )}
               <Ionicons name={focused ? 'people' : 'people-outline'} size={size} color={color} />
             </View>
           ),
@@ -105,14 +141,6 @@ export const MainTabNavigator = () => {
         options={{
           tabBarIcon: ({ color, size, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
-              {focused && (
-                <LinearGradient
-                  colors={['#FF6B5B', '#FFA14A']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.activeIconBg}
-                />
-              )}
               <Ionicons name={focused ? 'documents' : 'documents-outline'} size={size} color={color} />
             </View>
           ),
@@ -126,14 +154,6 @@ export const MainTabNavigator = () => {
         options={{
           tabBarIcon: ({ color, size, focused }) => (
             <View style={focused ? styles.activeIconContainer : undefined}>
-              {focused && (
-                <LinearGradient
-                  colors={['#FF6B5B', '#FFA14A']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.activeIconBg}
-                />
-              )}
               <Ionicons name={focused ? 'person' : 'person-outline'} size={size} color={color} />
             </View>
           ),
@@ -145,15 +165,52 @@ export const MainTabNavigator = () => {
 };
 
 const styles = StyleSheet.create({
-  activeIconContainer: {
-    position: 'relative',
+  wrapper: {
+    marginHorizontal: 12,
+    marginBottom: Platform.OS === 'ios' ? 12 : 6,
+    borderRadius: 40,
+    overflow: 'hidden',
+  },
+  gradientBg: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 40,
+  },
+  glassOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 40,
+    borderWidth: 1,
+  },
+  tabRow: {
+    flexDirection: 'row',
+    padding: 10,
+    gap: 8,
+  },
+  tab: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 28,
   },
-  activeIconBg: {
-    position: 'absolute',
-    width: 48,
-    height: 48,
-    borderRadius: BorderRadius.full,
+  iconContainer: {
+    minWidth: 56,
+    minHeight: 40,
+    borderRadius: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  activePill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: 24,
+  },
+  label: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
 });
