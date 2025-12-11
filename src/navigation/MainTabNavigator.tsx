@@ -24,19 +24,29 @@ export const MainTabNavigator = () => {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colors.card,
-          borderTopWidth: 0,
-          elevation: 20,
-          shadowColor: '#000',
-          shadowOffset: { width: 0, height: -4 },
-          shadowOpacity: 0.1,
-          shadowRadius: 12,
+          backgroundColor: 'transparent',
+          borderTopWidth: 1,
+          borderTopColor: 'rgba(0, 212, 255, 0.2)',
+          elevation: 0,
+          shadowOpacity: 0,
           height: Platform.OS === 'ios' ? 88 : 65,
           paddingBottom: Platform.OS === 'ios' ? 24 : 8,
           paddingTop: 8,
+          marginHorizontal: 12,
+          marginBottom: Platform.OS === 'ios' ? 8 : 4,
+          borderRadius: 40,
+          overflow: 'hidden',
         },
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.textSecondary,
+        tabBarBackground: () => (
+          <LinearGradient
+            colors={['#00D4FF', '#00A8FF', '#FF6B9D', '#FF4757']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={StyleSheet.absoluteFillObject}
+          />
+        ),
+        tabBarActiveTintColor: '#FFFFFF',
+        tabBarInactiveTintColor: '#FFFFFF',
         tabBarLabelStyle: {
           fontSize: 12,
           fontWeight: '600',
@@ -55,7 +65,9 @@ export const MainTabNavigator = () => {
             <View style={focused ? styles.activeIconContainer : undefined}>
               {focused && (
                 <LinearGradient
-                  colors={[colors.primary + '20', colors.primary + '10']}
+                  colors={['#FF6B5B', '#FFA14A']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.activeIconBg}
                 />
               )}
@@ -74,7 +86,9 @@ export const MainTabNavigator = () => {
             <View style={focused ? styles.activeIconContainer : undefined}>
               {focused && (
                 <LinearGradient
-                  colors={[colors.primary + '20', colors.primary + '10']}
+                  colors={['#FF6B5B', '#FFA14A']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.activeIconBg}
                 />
               )}
@@ -93,7 +107,9 @@ export const MainTabNavigator = () => {
             <View style={focused ? styles.activeIconContainer : undefined}>
               {focused && (
                 <LinearGradient
-                  colors={[colors.primary + '20', colors.primary + '10']}
+                  colors={['#FF6B5B', '#FFA14A']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.activeIconBg}
                 />
               )}
@@ -112,7 +128,9 @@ export const MainTabNavigator = () => {
             <View style={focused ? styles.activeIconContainer : undefined}>
               {focused && (
                 <LinearGradient
-                  colors={[colors.primary + '20', colors.primary + '10']}
+                  colors={['#FF6B5B', '#FFA14A']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
                   style={styles.activeIconBg}
                 />
               )}
