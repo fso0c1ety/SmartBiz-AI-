@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '../constants/colors';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '../constants/spacing';
 import { useThemeStore } from '../store/useThemeStore';
@@ -22,7 +23,22 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) 
   const colors = Colors[colorScheme];
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.surface }]}>
+    <LinearGradient
+      colors={colorScheme === 'dark' 
+        ? ['rgba(255, 107, 91, 0.1)', 'rgba(255, 161, 74, 0.05)']
+        : ['rgba(255, 107, 91, 0.08)', 'rgba(255, 161, 74, 0.04)']
+      }
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.container, { 
+        backgroundColor: colorScheme === 'dark' 
+          ? 'rgba(45, 37, 32, 0.7)'
+          : 'rgba(255, 249, 245, 0.7)',
+        borderColor: colorScheme === 'dark'
+          ? 'rgba(255, 107, 91, 0.2)'
+          : 'rgba(255, 107, 91, 0.15)',
+      }]}
+    >
       {tabs.map((tab) => {
         const isActive = activeTab === tab.key;
         return (
@@ -30,37 +46,60 @@ export const TabBar: React.FC<TabBarProps> = ({ tabs, activeTab, onTabChange }) 
             key={tab.key}
             style={[
               styles.tab,
-              isActive && [styles.activeTab, { backgroundColor: colors.primary }],
+              isActive && [
+                styles.activeTab,
+                {
+                  backgroundColor: colorScheme === 'dark'
+                    ? 'rgba(255, 107, 91, 0.3)'
+                    : 'rgba(255, 107, 91, 0.2)',
+                  borderColor: colors.primary,
+                },
+              ],
             ]}
             onPress={() => onTabChange(tab.key)}
             activeOpacity={0.7}
           >
-            <Ionicons
-              name={tab.icon}
-              size={20}
-              color={isActive ? '#FFFFFF' : colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.label,
-                { color: isActive ? '#FFFFFF' : colors.textSecondary },
-              ]}
-            >
-              {tab.label}
-            </Text>
+            {isActive && (
+              <LinearGradient
+                colors={['#FF6B5B', '#FFA14A']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+            )}
+            <View style={styles.tabContent}>
+              <Ionicons
+                name={tab.icon}
+                size={20}
+                color={isActive ? '#FFFFFF' : colors.textSecondary}
+              />
+              {isActive && (
+                <Text
+                  style={[
+                    styles.label,
+                    { color: '#FFFFFF' },
+                  ]}
+                >
+                  {tab.label}
+                </Text>
+              )}
+            </View>
           </TouchableOpacity>
         );
       })}
-    </View>
+    </LinearGradient>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    padding: 4,
-    borderRadius: BorderRadius.lg,
-    gap: 4,
+    padding: Spacing.xs,
+    borderRadius: 50,
+    gap: Spacing.xs,
+    borderWidth: 1,
+    backdropFilter: 'blur(10px)',
+    overflow: 'hidden',
   },
   tab: {
     flex: 1,
@@ -68,16 +107,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-    borderRadius: BorderRadius.md,
+    paddingHorizontal: Spacing.md,
+    borderRadius: 30,
     gap: 6,
+    borderWidth: 1,
+    borderColor: 'transparent',
   },
   activeTab: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowColor: '#FF6B5B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  tabContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   label: {
     fontSize: FontSize.sm,
