@@ -37,6 +37,7 @@ app.use('/api/business', businessRoutes);
 app.use('/api/agents', agentRoutes);
 app.use('/api/agent', chatRoutes);
 app.use('/api/agent', contentRoutes);
+app.use('/api/content', contentRoutes); // Also mount at /api/content for ContentFeedScreen
 
 // 404 handler
 app.use((req, res) => {
