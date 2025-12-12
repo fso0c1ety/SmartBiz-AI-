@@ -213,6 +213,11 @@ export class AIService {
     };
 
     const stripLeadingLabel = (text: string, label: string) => text.replace(new RegExp(`^\\s*${label}\\s*:\\s*`, 'i'), '').trim();
+    const stripMetaCommentary = (text: string) => {
+      // Remove common meta lines the model might add
+      const lines = text.split(/\r?\n/).filter((ln) => !/(here you go|let me know|you can tweak|adjust as needed|hope this helps)/i.test(ln));
+      return lines.join('\n').trim();
+    };
     const extractCode = (text: string) => {
       const fenceMatch = text.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
       if (fenceMatch) return fenceMatch[1].trim();
@@ -222,6 +227,7 @@ export class AIService {
     if (matched) {
       const label = typeLabelMap[matched.type] || 'Content';
       cleanedForContent = stripLeadingLabel(assistantMessage, label);
+      cleanedForContent = stripMetaCommentary(cleanedForContent);
       if (matched.type === 'code') cleanedForContent = extractCode(assistantMessage);
       labeledForChat = `${label}: ${cleanedForContent}`;
     }

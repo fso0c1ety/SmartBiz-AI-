@@ -349,10 +349,6 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
       if (lower.startsWith('blog:')) return 'blog';
       if (lower.startsWith('ad:')) return 'ad';
       if (lower.startsWith('code:')) return 'code';
-      // Heuristics
-      if (/```/.test(text)) return 'code';
-      if (/subject:/i.test(text) || /\bdear\b/i.test(text)) return 'email';
-      if (/#\w+/.test(text)) return 'caption';
       return 'text';
     };
 
@@ -435,7 +431,7 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
 
     // Specialized rendering
     if (!item.isUser) {
-      // Code block
+      // Code block (only when explicitly labeled)
       if (kind === 'code') {
         const codeMatch = contentText.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
         const code = (codeMatch ? codeMatch[1] : contentText).trim();
@@ -447,6 +443,12 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
                 <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>Code</Text>
                 <View style={[styles.codeContainer, { backgroundColor: colorScheme === 'dark' ? '#0B0F19' : '#F5F7FA', borderColor: colors.border }]}> 
                   <Text style={[styles.codeText, { color: colors.text }]}>{code}</Text>
+                  <View style={styles.blockActions}>
+                    <TouchableOpacity style={styles.blockButton} onPress={() => handleCopyMessage(code)}>
+                      <Ionicons name="copy" size={14} color={colors.textSecondary} />
+                      <Text style={[styles.blockButtonText, { color: colors.textSecondary }]}>Copy code</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
@@ -454,9 +456,8 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         );
       }
 
-      // Email
+      // Email (only when explicitly labeled)
       if (kind === 'email') {
-        // Try to split subject/body
         const subjectMatch = contentText.match(/subject:\s*(.*)/i);
         const body = contentText.replace(/subject:.*\n?/i, '').trim();
         const subject = subjectMatch ? subjectMatch[1].trim() : 'Email';
@@ -469,6 +470,12 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
                 <View style={[styles.emailCard, { borderColor: colors.border, backgroundColor: colorScheme === 'dark' ? '#0B0F19' : '#FFFFFF' }]}> 
                   <Text style={[styles.emailSubject, { color: colors.text }]}>{subject}</Text>
                   <Text style={[styles.emailBody, { color: colors.textSecondary }]}>{body}</Text>
+                  <View style={styles.blockActions}>
+                    <TouchableOpacity style={styles.blockButton} onPress={() => handleCopyMessage(`${subject}\n\n${body}`)}>
+                      <Ionicons name="copy" size={14} color={colors.textSecondary} />
+                      <Text style={[styles.blockButtonText, { color: colors.textSecondary }]}>Copy email</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </View>
             </View>
@@ -830,6 +837,23 @@ const styles = StyleSheet.create({
   emailBody: {
     fontSize: FontSize.sm,
     lineHeight: 20,
+  },
+  blockActions: {
+    flexDirection: 'row',
+    gap: Spacing.xs,
+    marginTop: Spacing.sm,
+  },
+  blockButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.sm,
+  },
+  blockButtonText: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.medium,
   },
   linkText: {
     textDecorationLine: 'underline',
