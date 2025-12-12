@@ -28,5 +28,6 @@ router.post('/:id/content/create', validate(generateValidation), ContentControll
 router.post('/:id/image/generate', validate(imageValidation), ContentController.generateImage);
 router.get('/:id/content/all', ContentController.getAll);
 router.get('/', ContentController.getAllContent); // Get all content with filters
+router.put('/content/:contentId/media', ContentController.updateContentMedia);
 
 export default router;

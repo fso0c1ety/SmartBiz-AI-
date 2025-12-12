@@ -24,4 +24,15 @@ export class ChatController {
       res.status(404).json({ error: error.message });
     }
   }
+
+  static async updateMessageMedia(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { messageId } = req.params as any;
+      const { media } = req.body as any;
+      const result = await AIService.updateMessageMedia({ messageId, media, userId: req.userId! });
+      res.status(200).json({ success: true, content: result });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
 }

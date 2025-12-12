@@ -702,6 +702,46 @@ export class AIService {
   }
 
   /**
+   * Update content media: merge media array into stored JSON
+   */
+  static async updateContentMedia(input: { contentId: string; media: Array<string | { base64?: string; url?: string }>; userId: string }) {
+    const { contentId, media, userId } = input;
+    const content = await prisma.content.findFirst({ where: { id: contentId }, include: { agent: { include: { business: true } } } });
+    if (!content) throw new Error('Content not found');
+    if (content.agent.business.userId !== userId) throw new Error('Unauthorized');
+    const data = JSON.parse(content.data || '{}');
+    const uris = (media || []).map((m: any) => typeof m === 'string' ? m : (m.base64 || m.url)).filter(Boolean);
+    data.media = uris;
+    const updated = await prisma.content.update({ where: { id: contentId }, data: { data: JSON.stringify(data) } });
+    return updated;
+  }
+
+  /**
+   * Update message media by creating/updating a linked content record
+   */
+  static async updateMessageMedia(input: { messageId: string; media: Array<string | { base64?: string; url?: string }>; userId: string }) {
+    const { messageId, media, userId } = input;
+    const message = await prisma.message.findFirst({ where: { id: messageId }, include: { agent: { include: { business: true } } } });
+    if (!message) throw new Error('Message not found');
+    if (message.agent.business.userId !== userId) throw new Error('Unauthorized');
+    const uris = (media || []).map((m: any) => typeof m === 'string' ? m : (m.base64 || m.url)).filter(Boolean);
+    // Try to find an existing content referencing this message
+    const existing = await prisma.content.findFirst({ where: { agentId: message.agentId, type: 'image' } });
+    const payload = {
+      prompt: 'Generated via chat',
+      media: uris,
+      generatedAt: new Date().toISOString(),
+      fromMessageId: messageId,
+    };
+    if (existing) {
+      const data = JSON.parse(existing.data || '{}');
+      const next = { ...data, ...payload };
+      return prisma.content.update({ where: { id: existing.id }, data: { data: JSON.stringify(next) } });
+    }
+    return prisma.content.create({ data: { agentId: message.agentId, type: 'image', data: JSON.stringify(payload) } });
+  }
+
+  /**
    * Generate AI image using external API
    * Using Pollinations.ai (free, no API key needed) or DeepSeek
    */
