@@ -258,6 +258,50 @@ export const getGeneratedContent = async (params: {
 };
 
 /**
+ * Persist media URIs for a content item
+ */
+export const updateContentMedia = async (params: {
+  contentId: string;
+  media: Array<string | { base64?: string; url?: string }>;
+}) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.put(
+      `${API_CONFIG.baseURL}/content/${params.contentId}/media`,
+      { media: params.media },
+      { headers }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.error || error.response?.data?.message || 'Failed to update content media'
+    );
+  }
+};
+
+/**
+ * Persist media URIs for a message
+ */
+export const updateMessageMedia = async (params: {
+  messageId: string;
+  media: Array<string | { base64?: string; url?: string }>;
+}) => {
+  try {
+    const headers = await getAuthHeaders();
+    const response = await axios.put(
+      `${API_CONFIG.baseURL}/agent/messages/${params.messageId}/media`,
+      { media: params.media },
+      { headers }
+    );
+    return response.data;
+  } catch (error: any) {
+    throw new Error(
+      error.response?.data?.error || error.response?.data?.message || 'Failed to update message media'
+    );
+  }
+};
+
+/**
  * OAuth: Connect Instagram account
  */
 export const connectInstagram = async (authCode: string) => {

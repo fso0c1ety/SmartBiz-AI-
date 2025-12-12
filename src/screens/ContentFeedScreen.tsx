@@ -14,11 +14,14 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Card } from '../components/Card';
+import * as FileSystem from 'expo-file-system';
+import * as MediaLibrary from 'expo-media-library';
 import { Colors } from '../constants/colors';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '../constants/spacing';
 import { useThemeStore } from '../store/useThemeStore';
 import { useToastStore } from '../store/useToastStore';
-import { getGeneratedContent, postToSocialMedia } from '../services/agentService';
+import { getGeneratedContent, postToSocialMedia, updateContentMedia } from '../services/agentService';
+import { cacheMediaForContent, getCachedMediaForContent } from '../store/useMediaCache';
 
 type ContentFeedScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'ContentFeed'>;
@@ -48,7 +51,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
   const colors = Colors[colorScheme];
   const { showToast } = useToastStore();
 
-  const [filter, setFilter] = useState<'all' | 'post' | 'caption' | 'email' | 'blog' | 'ad' | 'code' | 'image'>('all');
+  const [filter, setFilter] = useState<'all' | 'caption' | 'email' | 'blog' | 'ad' | 'code' | 'image'>('all');
   const [contents, setContents] = useState<GeneratedContent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -64,10 +67,27 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         type: filter === 'all' ? undefined : filter,
         limit: 50,
       });
-      const normalized = Array.isArray(data) ? data : data?.contents || [];
+      let normalized = Array.isArray(data) ? data : data?.contents || [];
+      // Remove posts entirely from view
+      normalized = normalized.filter((c: GeneratedContent) => c.type !== 'post');
+      // Cache media locally so images persist within app and push to backend
+      const withCachedMedia = await Promise.all(
+        normalized.map(async (c: GeneratedContent) => {
+          try {
+            if (c.media && c.media.length > 0) {
+              const existing = await getCachedMediaForContent(c.id);
+              const uris = existing || await cacheMediaForContent(c.id, c.media);
+              // try to persist URIs on backend for stable reloads
+              try { await updateContentMedia({ contentId: c.id, media: uris }); } catch {}
+              return { ...c, media: uris } as GeneratedContent;
+            }
+          } catch {}
+          return c;
+        })
+      );
       console.log('📊 Content data received:', data);
-      console.log('📊 Normalized contents:', normalized);
-      setContents(normalized);
+      console.log('📊 Normalized contents:', withCachedMedia);
+      setContents(withCachedMedia);
     } catch (error: any) {
       console.error('❌ Load content error:', error);
       showToast(error.message || 'Failed to load content', 'error');
@@ -267,7 +287,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         )}
 
         {/* Actions */}
-        {item.status === 'draft' && (
+        {(item.status === 'draft' || item.type === 'image') && (
           <View style={styles.actions}>
             <TouchableOpacity
               style={[styles.actionButton, { borderColor: colors.border }]}
@@ -277,6 +297,45 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
                 Edit
               </Text>
             </TouchableOpacity>
+            {item.media && item.media.length > 0 && (
+              <TouchableOpacity
+                style={[styles.actionButton, { borderColor: colors.border }]}
+                onPress={async () => {
+                  try {
+                    const { status } = await MediaLibrary.requestPermissionsAsync();
+                    if (status !== 'granted') {
+                      showToast('Permission required to save images', 'error');
+                      return;
+                    }
+                    // Save first image in the set
+                    const m = item.media[0];
+                    const uri = typeof m === 'string' ? m : (m.base64 || m.url);
+                    if (!uri) {
+                      showToast('No image to save', 'error');
+                      return;
+                    }
+                    let fileUri = uri;
+                    if (uri.startsWith('data:image')) {
+                      // Write base64 to a temp file
+                      const ext = uri.includes('image/png') ? 'png' : 'jpg';
+                      const path = FileSystem.cacheDirectory + `smartbiz_${Date.now()}.${ext}`;
+                      const base64Data = uri.split(',')[1];
+                      await FileSystem.writeAsStringAsync(path, base64Data, { encoding: FileSystem.EncodingType.Base64 });
+                      fileUri = path;
+                    }
+                    const asset = await MediaLibrary.createAssetAsync(fileUri);
+                    await MediaLibrary.createAlbumAsync('SmartBiz AI', asset, false);
+                    showToast('✅ Image saved to gallery', 'success');
+                  } catch (e: any) {
+                    console.error('Save image error:', e);
+                    showToast(e.message || 'Failed to save image', 'error');
+                  }
+                }}
+              >
+                <Ionicons name="download" size={18} color={colors.textSecondary} />
+                <Text style={[styles.actionText, { color: colors.textSecondary }]}>Save Image</Text>
+              </TouchableOpacity>
+            )}
             <TouchableOpacity
               style={[
                 styles.actionButton,
@@ -324,7 +383,6 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
       >
         {[
           { id: 'all', label: 'All', icon: 'grid' },
-          { id: 'post', label: 'Posts', icon: 'images' },
           { id: 'caption', label: 'Captions', icon: 'text' },
           { id: 'email', label: 'Emails', icon: 'mail' },
           { id: 'blog', label: 'Blogs', icon: 'document-text' },
@@ -336,7 +394,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             key={tab.id}
             style={[
               styles.filterTab,
-              filter === tab.id && [
+              filter === (tab.id as any) && [
                 styles.filterTabActive,
                 { backgroundColor: colors.primary },
               ],
@@ -346,12 +404,12 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             <Ionicons
               name={tab.icon as any}
               size={18}
-              color={filter === tab.id ? '#FFFFFF' : colors.textSecondary}
+              color={filter === (tab.id as any) ? '#FFFFFF' : colors.textSecondary}
             />
             <Text
               style={[
                 styles.filterTabText,
-                { color: filter === tab.id ? '#FFFFFF' : colors.textSecondary },
+                { color: filter === (tab.id as any) ? '#FFFFFF' : colors.textSecondary },
               ]}
             >
               {tab.label}

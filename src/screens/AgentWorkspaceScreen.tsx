@@ -22,6 +22,12 @@ import { useApi } from '../hooks/useApi';
 import { useToastStore } from '../store/useToastStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { cacheMediaForContent, getCachedMediaForContent } from '../store/useMediaCache';
+const simpleHash = (s: string) => {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h).toString();
+};
 
 type AgentWorkspaceScreenProps = {
   navigation: NativeStackNavigationProp<any>;
@@ -142,12 +148,27 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
     setIsLoadingMessages(true);
     try {
       const apiMessages = await getMessages(selectedAgent.id);
-      const formattedMessages: Message[] = apiMessages.map((msg: any) => ({
-        id: msg.id,
-        text: msg.message,
-        isUser: msg.role === 'user',
-        timestamp: new Date(msg.createdAt),
-      }));
+      const formattedMessages: Message[] = await Promise.all(
+        apiMessages.map(async (msg: any) => {
+          const base: Message = {
+            id: msg.id,
+            text: msg.message,
+            isUser: msg.role === 'user',
+            timestamp: new Date(msg.createdAt),
+            type: msg.type || (msg.media && msg.media.length ? 'image' : 'text'),
+          };
+          if (msg.media && msg.media.length > 0) {
+            try {
+              const existing = await getCachedMediaForContent(msg.id);
+              const uris = existing || await cacheMediaForContent(msg.id, msg.media);
+              return { ...base, imageUrl: uris[0] || (typeof msg.media[0] === 'string' ? msg.media[0] : (msg.media[0].base64 || msg.media[0].url)) };
+            } catch {
+              return { ...base, imageUrl: (typeof msg.media[0] === 'string' ? msg.media[0] : (msg.media[0].base64 || msg.media[0].url)) };
+            }
+          }
+          return base;
+        })
+      );
       setMessages(formattedMessages);
     } catch (error) {
       console.error('Failed to load messages:', error);
@@ -190,14 +211,32 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
       // Remove thinking message
       setMessages((prev) => prev.filter(msg => msg.id !== 'thinking-temp'));
 
+      let imageUrl: string | undefined = response.imageUrl;
+      if (response.media && response.media.length > 0) {
+        // Prefer direct media payload
+        const direct = typeof response.media[0] === 'string' ? response.media[0] : (response.media[0].base64 || response.media[0].url);
+        imageUrl = direct || imageUrl;
+        // Also cache to file system for stability if base64
+        try {
+          const key = response.id ? String(response.id) : `msg-${simpleHash(response.message || '')}`;
+          const uris = await cacheMediaForContent(key, response.media);
+          imageUrl = uris[0] || imageUrl;
+        } catch {}
+      }
       const aiMessage: Message = {
         id: `msg-${Date.now()}-ai`,
         text: response.message,
         isUser: false,
         timestamp: new Date(),
-        imageUrl: response.imageUrl,
-        type: response.type || 'text',
+        imageUrl,
+        type: response.type || (imageUrl ? 'image' : 'text'),
       };
+      // Push message media to backend for persistence
+      try {
+        if (response.media && response.media.length > 0 && response.id) {
+          await updateMessageMedia({ messageId: String(response.id), media: response.media });
+        }
+      } catch {}
 
       // Add AI message and start typing animation
       setMessages((prev) => [...prev, aiMessage]);
