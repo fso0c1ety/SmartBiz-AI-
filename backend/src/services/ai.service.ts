@@ -235,6 +235,28 @@ export class AIService {
       if (fenceMatch) return fenceMatch[1].trim();
       return text.trim();
     };
+    const sanitizeOutput = (kind: string | null, text: string) => {
+      if (!kind) return text.trim();
+      const t = text.trim();
+      if (kind === 'email') {
+        // Keep Subject line and body only
+        const subjectMatch = t.match(/subject:\s*(.*)/i);
+        const subject = subjectMatch ? subjectMatch[1].trim() : '';
+        // Body: everything after the Subject: line
+        const body = t.replace(/^[\s\S]*?subject:.*\n?/i, '').trim();
+        const cleanBody = stripMetaCommentary(body).replace(/^[-*_\s]+$/gm, '').trim();
+        return `${subject ? `Subject: ${subject}\n\n` : ''}${cleanBody}`.trim();
+      }
+      if (kind === 'code') {
+        return extractCode(t);
+      }
+      // caption/post/ad/blog: return only text, remove headings/separators
+      const cleaned = stripMetaCommentary(t)
+        .replace(/^\s*[*_-]{2,}\s*$/gm, '')
+        .replace(/^\s*\*\*.*\*\*\s*$/gm, '')
+        .trim();
+      return cleaned;
+    };
 
     const markers: Record<string, { start: string; end: string }> = {
       caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
@@ -264,9 +286,7 @@ export class AIService {
 
     if (matched) {
       const label = typeLabelMap[matched.type] || 'Content';
-      cleanedForContent = stripLeadingLabel(assistantMessage, label);
-      cleanedForContent = stripMetaCommentary(cleanedForContent);
-      if (matched.type === 'code') cleanedForContent = extractCode(assistantMessage);
+      cleanedForContent = sanitizeOutput(matched.type, stripLeadingLabel(assistantMessage, label));
       const { start, end } = markers[matched.type];
       labeledForChat = `${label}:\n${start}\n${cleanedForContent}\n${end}`;
     }
