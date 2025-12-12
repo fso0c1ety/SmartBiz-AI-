@@ -199,7 +199,7 @@ export class AIService {
       { type: 'code', test: (t) => /```|\bfunction\b|\bconst\b|\bclass\b/.test(t) },
     ];
 
-    const matched = detectors.find((d) => d.test(lower));
+    let matched = detectors.find((d) => d.test(lower));
     let labeledForChat = assistantMessage;
     let cleanedForContent = assistantMessage;
 
@@ -232,6 +232,23 @@ export class AIService {
       ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
       code: { start: '<<CODE_START>>', end: '<<CODE_END>>' },
     };
+
+    // Strong fallback detection to ensure markers are present
+    if (!matched) {
+      if (/subject:\s/i.test(assistantMessage) || /\bdear\b/i.test(assistantMessage)) {
+        matched = { type: 'email', test: () => true } as any;
+      } else if (/```/.test(assistantMessage)) {
+        matched = { type: 'code', test: () => true } as any;
+      } else if (/#\w+/.test(assistantMessage)) {
+        matched = { type: 'caption', test: () => true } as any;
+      } else if (/\b(post|tweet|social\s+post)\b/i.test(assistantMessage)) {
+        matched = { type: 'post', test: () => true } as any;
+      } else if (/\b(ad|advertisement|cta|call to action)\b/i.test(assistantMessage)) {
+        matched = { type: 'ad', test: () => true } as any;
+      } else if (/\b(blog|introduction|outline)\b/i.test(assistantMessage)) {
+        matched = { type: 'blog', test: () => true } as any;
+      }
+    }
 
     if (matched) {
       const label = typeLabelMap[matched.type] || 'Content';
@@ -313,6 +330,18 @@ export class AIService {
         maxTokens: 1500,
       });
       generatedContent = completion.content;
+      // Add explicit markers to generated content for consistent parsing
+      const genMarkers: Record<string, { start: string; end: string }> = {
+        caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
+        post: { start: '<<POST_START>>', end: '<<POST_END>>' },
+        email: { start: '<<EMAIL_START>>', end: '<<EMAIL_END>>' },
+        blog: { start: '<<BLOG_START>>', end: '<<BLOG_END>>' },
+        ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
+      };
+      if (genMarkers[type]) {
+        const { start, end } = genMarkers[type];
+        generatedContent = `${start}\n${generatedContent}\n${end}`;
+      }
       usage = completion.usage;
     } catch (err: any) {
       const status = err?.status || err?.response?.status;

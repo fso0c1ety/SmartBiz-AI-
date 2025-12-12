@@ -343,22 +343,37 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
     // Detect labeled content types in assistant messages and render with wrappers
     const detectKind = (text: string) => {
       const lower = text.toLowerCase();
+      // Prefer explicit markers
       if (lower.includes('<<caption_start>>')) return 'caption';
       if (lower.includes('<<post_start>>')) return 'post';
       if (lower.includes('<<email_start>>')) return 'email';
       if (lower.includes('<<blog_start>>')) return 'blog';
       if (lower.includes('<<ad_start>>')) return 'ad';
       if (lower.includes('<<code_start>>')) return 'code';
+      // Fallback to label prefixes
+      if (lower.startsWith('caption:')) return 'caption';
+      if (lower.startsWith('post:')) return 'post';
+      if (lower.startsWith('email:')) return 'email';
+      if (lower.startsWith('blog:')) return 'blog';
+      if (lower.startsWith('ad:')) return 'ad';
+      if (lower.startsWith('code:')) return 'code';
       return 'text';
     };
 
     const stripLabel = (text: string) => text.replace(/^\s*([A-Za-z]+)\s*:\s*/i, '').trim();
     const extractBetweenMarkers = (text: string, start: string, end: string) => {
-      const s = text.indexOf(start);
-      const e = text.indexOf(end);
-      if (s !== -1 && e !== -1 && e > s) {
-        return text.substring(s + start.length, e).trim();
+      // Robust extraction using regex; returns inner content only
+      const pattern = new RegExp(`${start.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([\s\S]*?)${end.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, 'i');
+      const match = text.match(pattern);
+      if (match && match[1]) {
+        // Remove any residual marker lines and trim
+        return match[1]
+          .split(/\r?\n/)
+          .filter((ln) => !ln.includes(start) && !ln.includes(end))
+          .join('\n')
+          .trim();
       }
+      // Fallback: remove label prefix if markers missing
       return stripLabel(text);
     };
 
