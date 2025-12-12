@@ -243,6 +243,17 @@ export class AIService {
 
         const mediaUris = [imageResult.imageDataUrl || imageResult.imageUrl].filter(Boolean) as string[];
 
+        // Persist media to database
+        try {
+          await AIService.updateMessageMedia({
+            messageId: created.id,
+            media: mediaUris,
+            userId,
+          });
+        } catch (e: any) {
+          console.warn('⚠️ Failed to persist chat media:', e?.message || e);
+        }
+
         return {
           messageId: created.id,
           message: assistantMessage,
@@ -602,27 +613,33 @@ export class AIService {
       orderBy: { createdAt: 'asc' },
     });
 
-    // Attach media by looking up related image content created from this messageId
-    const imageContents = await prisma.content.findMany({
-      where: { agentId, type: 'image' },
-      orderBy: { createdAt: 'desc' },
-      take: 200,
-    });
-    const withMedia = messages.map((m) => {
-      try {
-        const match = imageContents.find((c) => {
-          const data = JSON.parse(c.data || '{}');
-          return String(data.fromMessageId || '') === String(m.id);
-        });
-        if (!match) return m as any;
-        const data = JSON.parse(match.data || '{}');
-        const media = data.media || [];
-        if (Array.isArray(media) && media.length > 0) return { ...m, media } as any;
-      } catch {}
-      return m as any;
-    });
+    // Fetch relational media and merge
+    const ids = messages.map((m) => m.id);
+    let mediaRows: Array<any> = [];
+    try {
+      const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+      if (ids.length > 0) {
+        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE messageId IN (${placeholders}) ORDER BY createdAt DESC`, ...ids);
+      }
+    } catch (e: any) {
+      console.warn('⚠️ Failed to query message media rows:', e?.message || e);
+    }
+    const byMessage: Record<string, Array<string>> = {};
+    for (const r of mediaRows) {
+      const arr = byMessage[r.messageid] || [];
+      const uri = r.url || (r.base64 ? `data:${r.mimetype || 'image/png'};base64,${r.base64}` : null);
+      if (uri) arr.push(uri);
+      byMessage[r.messageid] = arr;
+    }
 
-    return withMedia;
+    return messages.map((m) => ({
+      id: m.id,
+      agentId: m.agentId,
+      role: m.role,
+      message: m.message,
+      media: byMessage[m.id] || [],
+      createdAt: m.createdAt.toISOString(),
+    }));
   }
 
   /**
@@ -909,6 +926,24 @@ export class AIService {
             }),
           },
         });
+        // Also persist to media table for relational retrieval
+        try {
+          const first = base64Image ? base64Image : imageUrl;
+          const isData = /^data:image\//i.test(first);
+          const isHttp = /^https?:\/\//i.test(first);
+          const mime = isData ? (first.split(';')[0].replace('data:', '') || 'image/png') : null;
+          const base64 = isData ? first.split(',')[1] : null;
+          await prisma.$executeRawUnsafe(
+            `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+            agentId,
+            content.id,
+            isHttp ? first : null,
+            base64,
+            mime
+          );
+        } catch (e: any) {
+          console.warn('⚠️ Failed to insert content media row:', e?.message || e);
+        }
         return { content, imageUrl, imageDataUrl: base64Image || null, usage: null };
       }
 
@@ -952,6 +987,25 @@ export class AIService {
             }),
           },
         });
+        // Also persist to media table for relational retrieval
+        try {
+          const first = base64Image;
+          if (first) {
+            const isData = /^data:image\//i.test(first);
+            const mime = isData ? (first.split(';')[0].replace('data:', '') || 'image/png') : null;
+            const base64 = isData ? first.split(',')[1] : null;
+            await prisma.$executeRawUnsafe(
+              `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+              agentId,
+              content.id,
+              null,
+              base64,
+              mime
+            );
+          }
+        } catch (e: any) {
+          console.warn('⚠️ Failed to insert content media row:', e?.message || e);
+        }
         return { content, imageUrl, imageDataUrl: base64Image || null, usage: null };
       }
 
