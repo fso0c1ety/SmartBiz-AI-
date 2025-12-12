@@ -115,6 +115,36 @@ export class AIService {
     cleaned = cleaned.replace(/^\s*(\*\*\s*)?subject\s*:\s*.*$/gmi, '').trim();
     return cleaned;
   }
+
+  private static detectRequestedType(text: string): 'email' | 'code' | 'blog' | 'post' | 'caption' | 'ad' | null {
+    const t = text.toLowerCase();
+    if (/\bemail\b/.test(t)) return 'email';
+    if (/\bcode\b|```/.test(t)) return 'code';
+    if (/\bblog\b/.test(t)) return 'blog';
+    if (/\bpost\b|\btweet\b|social\s+post/.test(t)) return 'post';
+    if (/\bcaption\b/.test(t)) return 'caption';
+    if (/\b(ad|advertisement)\b/.test(t)) return 'ad';
+    return null;
+  }
+
+  private static minimalReplyInstruction(type: string): string {
+    switch (type) {
+      case 'email':
+        return 'Reply ONLY with:\nSubject: <subject>\n\nBody:\n<body>. Do not add comments, suggestions, or extra lines.';
+      case 'code':
+        return 'Reply ONLY with raw code. No explanations, no markdown fences, no comments.';
+      case 'blog':
+        return 'Reply ONLY with the blog text. No commentary or meta instructions.';
+      case 'post':
+        return 'Reply ONLY with the social post text. No extra commentary.';
+      case 'caption':
+        return 'Reply ONLY with the caption. No extra commentary.';
+      case 'ad':
+        return 'Reply ONLY with the ad copy. No extra commentary.';
+      default:
+        return 'Reply concisely with content only.';
+    }
+  }
   /**
    * Chat with an AI agent
    */
@@ -214,9 +244,11 @@ export class AIService {
     let assistantMessage = '';
     let usage: any = null;
     try {
+      const requestedType = AIService.detectRequestedType(message);
+      const minimalInstruction = requestedType ? AIService.minimalReplyInstruction(requestedType) : '';
       const completion = await createChatCompletion({
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: minimalInstruction ? `${systemPrompt}\n\n${minimalInstruction}` : systemPrompt },
           ...conversationHistory,
           { role: 'user', content: message },
         ],
