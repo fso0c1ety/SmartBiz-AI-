@@ -104,6 +104,13 @@ export interface ImageGenerationInput {
 }
 
 export class AIService {
+  private static sanitizeEmailMarkers(text: string) {
+    return text
+      .replace(/<<EMAIL_START>>/g, '')
+      .replace(/<<EMAIL_END>>/g, '')
+      .replace(/^\s*-{3,}\s*$/gm, '')
+      .trim();
+  }
   /**
    * Chat with an AI agent
    */
@@ -273,14 +280,16 @@ export class AIService {
           subject = subjectMatch?.[1]?.trim();
           // If no explicit Body:, split by first blank line
           if (bodyMatch?.[1]) {
-            body = bodyMatch[1].trim();
+            body = AIService.sanitizeEmailMarkers(bodyMatch[1].trim());
           } else {
             const lines = assistantMessage.split(/\r?\n/);
             const firstLine = lines[0]?.trim();
             const rest = lines.slice(1).join('\n').trim();
             if (!subject && firstLine) subject = firstLine.replace(/^subject\s*:\s*/i, '').trim();
-            body = rest || assistantMessage.trim();
+            body = AIService.sanitizeEmailMarkers(rest || assistantMessage.trim());
           }
+          // Clean subject markdown emphasis like ** ... **
+          if (subject) subject = subject.replace(/^\*\*\s*|\s*\*\*$/g, '').trim();
 
           // Enforce sanitized email rendering: rebuild content block
           sanitizedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
@@ -420,14 +429,15 @@ export class AIService {
       const bodyMatch = generatedContent.match(/body\s*:\s*([\s\S]*)/i);
       subject = subjectMatch?.[1]?.trim();
       if (bodyMatch?.[1]) {
-        body = bodyMatch[1].trim();
+        body = AIService.sanitizeEmailMarkers(bodyMatch[1].trim());
       } else {
         const lines = generatedContent.split(/\r?\n/);
         const firstLine = lines[0]?.trim();
         const rest = lines.slice(1).join('\n').trim();
         if (!subject && firstLine) subject = firstLine.replace(/^subject\s*:\s*/i, '').trim();
-        body = rest || generatedContent.trim();
+        body = AIService.sanitizeEmailMarkers(rest || generatedContent.trim());
       }
+      if (subject) subject = subject.replace(/^\*\*\s*|\s*\*\*$/g, '').trim();
       generatedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
     }
     if (type === 'code') {
