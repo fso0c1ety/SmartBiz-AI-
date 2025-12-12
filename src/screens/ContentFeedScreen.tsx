@@ -23,6 +23,8 @@ import { useToastStore } from '../store/useToastStore';
 import { getGeneratedContent, postToSocialMedia, updateContentMedia } from '../services/agentService';
 import { cacheMediaForContent, getCachedMediaForContent } from '../store/useMediaCache';
 import { loadFeedCache, saveFeedCache } from '../store/usePersistentCache';
+import { useAgentStore } from '../store/useAgentStore';
+import { useApi } from '../hooks/useApi';
 
 type ContentFeedScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'ContentFeed'>;
@@ -51,6 +53,8 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
   const { colorScheme } = useThemeStore();
   const colors = Colors[colorScheme];
   const { showToast } = useToastStore();
+  const { selectedAgent } = useAgentStore();
+  const { getMessages } = useApi();
 
   const [filter, setFilter] = useState<'all' | 'caption' | 'email' | 'blog' | 'ad' | 'code' | 'image'>('all');
   const [contents, setContents] = useState<GeneratedContent[]>([]);
@@ -76,6 +80,29 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
       let normalized = Array.isArray(data) ? data : data?.contents || [];
       // Remove posts entirely from view
       normalized = normalized.filter((c: GeneratedContent) => c.type !== 'post');
+
+      // If images missing or empty, pull from chat messages for the selected agent as fallback
+      if (selectedAgent?.id) {
+        try {
+          const msgs = await getMessages(selectedAgent.id);
+          const imageMsgs = (msgs || []).filter((m: any) => Array.isArray(m.media) && m.media.length > 0);
+          const mappedFromChat: GeneratedContent[] = imageMsgs.map((m: any) => ({
+            id: m.id,
+            agentId: selectedAgent.id,
+            agentName: selectedAgent.name || 'AI Agent',
+            type: 'image',
+            content: m.message || '',
+            media: m.media,
+            status: 'draft',
+            createdAt: m.createdAt || new Date().toISOString(),
+            engagement: {},
+          }));
+          // Merge chat-derived images prioritizing unique ids
+          const existingIds = new Set(normalized.map((n: any) => n.id));
+          const merged = [...mappedFromChat.filter((c) => !existingIds.has(c.id)), ...normalized];
+          normalized = merged;
+        } catch {}
+      }
       // Cache media locally so images persist within app and push to backend
       const withCachedMedia = await Promise.all(
         normalized.map(async (c: GeneratedContent) => {
