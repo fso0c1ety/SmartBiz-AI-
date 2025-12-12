@@ -225,7 +225,7 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         imageUrl = direct || imageUrl;
         // Also cache to file system for stability if base64
         try {
-          const key = response.id ? String(response.id) : `msg-${simpleHash(response.message || '')}`;
+          const key = response.messageId ? String(response.messageId) : (response.id ? String(response.id) : `msg-${simpleHash(response.message || '')}`);
           const uris = await cacheMediaForContent(key, response.media);
           imageUrl = uris[0] || imageUrl;
         } catch {}
@@ -240,8 +240,8 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
       };
       // Push message media to backend for persistence
       try {
-        if (response.media && response.media.length > 0 && response.id) {
-          await updateMessageMedia({ messageId: String(response.id), media: response.media });
+        if (response.media && response.media.length > 0 && (response.messageId || response.id)) {
+          await updateMessageMedia({ messageId: String(response.messageId || response.id), media: response.media });
         }
       } catch {}
 

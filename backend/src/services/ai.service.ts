@@ -233,8 +233,7 @@ export class AIService {
 
         // Minimal assistant response to avoid description
         const assistantMessage = `Image generated.`;
-        
-        await prisma.message.create({
+        const created = await prisma.message.create({
           data: {
             agentId,
             role: 'assistant',
@@ -242,10 +241,14 @@ export class AIService {
           },
         });
 
+        const mediaUris = [imageResult.imageDataUrl || imageResult.imageUrl].filter(Boolean) as string[];
+
         return {
+          messageId: created.id,
           message: assistantMessage,
           type: 'image',
           imageUrl: imageResult.imageUrl,
+          media: mediaUris,
           imagePrompt: imagePrompt,
           usage: null,
         };
