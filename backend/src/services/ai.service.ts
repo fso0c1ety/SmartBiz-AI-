@@ -287,20 +287,21 @@ export class AIService {
         }
 
         if (matched.type === 'code') {
-          // Strip Markdown code fences and keep code only
-          const fenceMatch = assistantMessage.match(/```([\s\S]*?)```/m);
-          if (fenceMatch?.[1]) {
-            // Remove optional language identifier on first line
-            const raw = fenceMatch[1];
+          // Strip ALL Markdown code fences; support multiple blocks
+          const fenceRegex = /```[\w-]*\n([\s\S]*?)```/g;
+          const blocks: string[] = [];
+          let m: RegExpExecArray | null;
+          while ((m = fenceRegex.exec(assistantMessage)) !== null) {
+            const raw = m[1];
             const lines = raw.split(/\r?\n/);
-            const maybeLang = lines[0].trim();
-            // If the first line looks like a language tag, drop it
-            const code = /^(tsx?|jsx?|json|html|css|python|java|c\+\+|c|go|rust|sql|bash|sh)$/i.test(maybeLang)
-              ? lines.slice(1).join('\n')
-              : raw;
-            sanitizedContent = code.trim();
+            const maybeLang = lines[0]?.trim();
+            const isLangHeader = /^(tsx?|jsx?|json|html|css|python|java|c\+\+|c|go|rust|sql|bash|sh)$/i.test(maybeLang);
+            const code = isLangHeader ? lines.slice(1).join('\n') : raw;
+            blocks.push(code.trim());
+          }
+          if (blocks.length > 0) {
+            sanitizedContent = blocks.join('\n\n');
           } else {
-            // Remove any stray backticks
             sanitizedContent = assistantMessage.replace(/```/g, '').trim();
           }
         }
@@ -428,6 +429,23 @@ export class AIService {
         body = rest || generatedContent.trim();
       }
       generatedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
+    }
+    if (type === 'code') {
+      // Sanitize code outputs similarly to chat path
+      const fenceRegex = /```[\w-]*\n([\s\S]*?)```/g;
+      const blocks: string[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = fenceRegex.exec(generatedContent)) !== null) {
+        const raw = m[1];
+        const lines = raw.split(/\r?\n/);
+        const maybeLang = lines[0]?.trim();
+        const isLangHeader = /^(tsx?|jsx?|json|html|css|python|java|c\+\+|c|go|rust|sql|bash|sh)$/i.test(maybeLang);
+        const code = isLangHeader ? lines.slice(1).join('\n') : raw;
+        blocks.push(code.trim());
+      }
+      generatedContent = blocks.length > 0
+        ? blocks.join('\n\n')
+        : generatedContent.replace(/```/g, '').trim();
     }
 
     // Store generated content

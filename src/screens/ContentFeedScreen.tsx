@@ -64,9 +64,10 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         type: filter === 'all' ? undefined : filter,
         limit: 50,
       });
+      const normalized = Array.isArray(data) ? data : data?.contents || [];
       console.log('📊 Content data received:', data);
-      console.log('📊 Contents array:', data.contents);
-      setContents(data.contents || []);
+      console.log('📊 Normalized contents:', normalized);
+      setContents(normalized);
     } catch (error: any) {
       console.error('❌ Load content error:', error);
       showToast(error.message || 'Failed to load content', 'error');
