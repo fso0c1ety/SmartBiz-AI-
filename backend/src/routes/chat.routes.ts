@@ -17,6 +17,7 @@ const chatValidation = [
 // Routes
 router.post('/:id/chat', validate(chatValidation), ChatController.sendMessage);
 router.get('/:id/messages', ChatController.getMessages);
-router.put('/agent/messages/:messageId/media', ChatController.updateMessageMedia);
+// Persist media for a specific chat message
+router.put('/messages/:messageId/media', ChatController.updateMessageMedia);
 
 export default router;
