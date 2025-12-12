@@ -32,7 +32,9 @@ export const cacheMediaForContent = async (contentId: string, media: MediaItem[]
       const ext = 'jpg'; // assume
       const path = mediaDir + `smartbiz_${contentId}_${Date.now()}.${ext}`;
       try {
+        console.log('📸 Downloading image:', src, 'to', path);
         await FileSystem.downloadAsync(src, path);
+        console.log('📸 Download successful, URI:', 'file://' + path);
         uris.push('file://' + path);
       } catch (e) {
         console.warn('Failed to download image:', src, e);

@@ -91,8 +91,10 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
                 return `data:image/png;base64,${v}`;
               };
               const normalizedMedia = (c.media || []).map(normalize).filter(Boolean) as string[];
+              console.log(`📸 Caching media for content ${c.id}:`, normalizedMedia);
               const existing = await getCachedMediaForContent(c.id);
               const uris = existing || await cacheMediaForContent(c.id, normalizedMedia);
+              console.log(`📸 Cached URIs for ${c.id}:`, uris);
               // try to persist URIs on backend for stable reloads
               try { await updateContentMedia({ contentId: c.id, media: uris }); }
               catch (e: any) {
@@ -105,7 +107,9 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             // @ts-ignore
             if ((c as any).imageUrl) {
               const uri = (c as any).imageUrl as string;
+              console.log(`📸 Fallback caching imageUrl for content ${c.id}:`, uri);
               const uris = await cacheMediaForContent(c.id, [uri]);
+              console.log(`📸 Fallback cached URIs for ${c.id}:`, uris);
               try { await updateContentMedia({ contentId: c.id, media: uris }); } catch {}
               return { ...c, media: uris } as GeneratedContent;
             }
@@ -263,7 +267,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             <View style={styles.mediaGrid}>
               {item.media.map((m, idx) => {
                 return (
-                  <Image key={idx} source={{ uri: m }} style={styles.mediaGridImage} />
+                  <Image key={idx} source={{ uri: m }} style={styles.mediaGridImage} onError={() => console.log('Image load error for:', m)} />
                 );
               })}
             </View>
@@ -275,7 +279,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             >
               {item.media.map((m, idx) => {
                 return (
-                  <Image key={idx} source={{ uri: m }} style={styles.mediaImageLarge} />
+                  <Image key={idx} source={{ uri: m }} style={styles.mediaImageLarge} onError={() => console.log('Image load error for:', m)} />
                 );
               })}
             </ScrollView>

@@ -845,12 +845,12 @@ export class AIService {
     const normalized = prompt.toLowerCase();
     const mentionsPerson = /(person|people|man|woman|male|female|guy|girl|model|portrait|face|headshot|human)/i.test(normalized);
     if (!mentionsPerson) {
-      enhancedPrompt += ' No human subjects. Focus on typography, abstract graphics, product or brand elements.';
+      enhancedPrompt += ' No humans. Abstract design.';
     } else {
-      enhancedPrompt += ' Avoid stereotypes. Neutral, inclusive depiction. No specific ethnicity unless explicitly requested.';
+      enhancedPrompt += ' Inclusive. No stereotypes.';
     }
     // Encourage neutral background and brand colors to reduce provider defaults
-    enhancedPrompt += ' Neutral background. Use brand colors.';
+    enhancedPrompt += ' Neutral bg. Brand colors.';
 
     const provider = (process.env.IMAGE_PROVIDER || 'pollinations').toLowerCase();
     const [w, h] = size.split('x').map((v) => parseInt(v, 10));
