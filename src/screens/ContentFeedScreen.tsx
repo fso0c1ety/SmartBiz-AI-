@@ -91,6 +91,14 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
               }
               return { ...c, media: uris } as GeneratedContent;
             }
+            // Fallback: if imageUrl exists but media is empty, treat it as media
+            // @ts-ignore
+            if ((c as any).imageUrl) {
+              const uri = (c as any).imageUrl as string;
+              const uris = await cacheMediaForContent(c.id, [uri]);
+              try { await updateContentMedia({ contentId: c.id, media: uris }); } catch {}
+              return { ...c, media: uris } as GeneratedContent;
+            }
           } catch {}
           return c;
         })
