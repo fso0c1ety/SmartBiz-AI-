@@ -109,15 +109,12 @@ export class AIService {
    */
   static async chat(input: ChatInput) {
     ensureProviderConfigured();
-    
+
     const { agentId, message, userId } = input;
 
     // Verify agent ownership
     const agent = await prisma.agent.findFirst({
-      where: {
-        id: agentId,
-        business: { userId },
-      },
+      where: { id: agentId, business: { userId } },
       include: { business: true },
     });
 
@@ -130,90 +127,46 @@ export class AIService {
     const isImageRequest = imageKeywords.test(message);
 
     if (isImageRequest) {
-      // Extract the image description from the message
       const imagePrompt = message.replace(/^(please|can you|could you|i want you to|i need you to|do that)\s+/i, '').trim();
-      
       console.log('🎨 Image request detected:', imagePrompt);
-      
       try {
-        // Generate the image
-        const imageResult = await this.generateImage({
-          agentId,
-          prompt: imagePrompt,
-          userId,
-        });
-
-        console.log('✅ Image generated:', imageResult.imageUrl);
+        const imageResult = await this.generateImage({ agentId, prompt: imagePrompt, userId });
 
         // Store user message
-        await prisma.message.create({
-          data: {
-            agentId,
-            role: 'user',
-            message,
-          },
-        });
+        await prisma.message.create({ data: { agentId, role: 'user', message } });
 
-        // Create assistant response with structured image data
-        const assistantMessage = `I've created a professional image for your brand.`;
-        
-        await prisma.message.create({
-          data: {
-            agentId,
-            role: 'assistant',
-            // Detect content types in assistant reply and persist to content feed
-            const lower = assistantMessage.toLowerCase();
+        // Assistant acknowledgement
+        const assistantMsg = `I've created a professional image for your brand.`;
+        await prisma.message.create({ data: { agentId, role: 'assistant', message: assistantMsg } });
+
+        return {
+          message: assistantMsg,
+          type: 'image',
+          imageUrl: imageResult.imageUrl,
+          imagePrompt,
+          usage: null,
+        };
       } catch (error: any) {
-        // If image generation fails, fall back to text response
         console.error('❌ Image generation failed:', error.message);
+        // continue to normal chat fallback
       }
     }
 
     // Store user message
-    await prisma.message.create({
-      data: {
-        agentId,
-            // If a caption is detected, label the chat reply as "Caption:" but persist only the caption text in content
-            let assistantMessageForChat = assistantMessage;
-            if (matched?.type === 'caption') {
-              assistantMessageForChat = `Caption: ${assistantMessage.replace(/^\s*caption\s*:\s*/i, '')}`;
-            }
-
-            // Store assistant response (with caption label when applicable)
-            await prisma.message.create({
-              data: {
-                agentId,
-                role: 'assistant',
-                message: assistantMessageForChat,
-              },
-            });
-
-            if (matched) {
-        message,
-                // Prepare clean content text (remove any leading caption label)
-                const cleanContent = matched.type === 'caption'
-                  ? assistantMessage.replace(/^\s*caption\s*:\s*/i, '')
-                  : assistantMessage;
-
-      },
-    });
+    await prisma.message.create({ data: { agentId, role: 'user', message } });
 
     // Build AI context with memory
-    const { systemPrompt, recentMessages } = await AIMemoryService.buildAIContext(
-      agentId,
-                      content: cleanContent,
-    );
+    const { systemPrompt, recentMessages } = await AIMemoryService.buildAIContext(agentId, message);
 
-    // Prepare conversation history
     const conversationHistory = recentMessages.map((msg) => ({
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.message,
     }));
 
-    // Call provider; fallback locally if quota exceeded
+    // Call provider
     let assistantMessage = '';
     let usage: any = null;
-              message: assistantMessageForChat,
+    try {
       const completion = await createChatCompletion({
         messages: [
           { role: 'system', content: systemPrompt },
@@ -229,27 +182,13 @@ export class AIService {
       const status = err?.status || err?.response?.status;
       if (status === 429 || /quota/i.test(err?.message || '')) {
         const fallbackMessage = `I'm currently at capacity. Here's a quick on-brand reply: ${message}`;
-        assistantMessage = fallbackMessage;
-        usage = null;
-
-        await prisma.message.create({
-          data: {
-            agentId,
-            role: 'assistant',
-            message: fallbackMessage,
-          },
-        });
-
-        return {
-          message: fallbackMessage,
-          usage: null,
-          note: 'Served from local fallback due to provider quota/rate limit.',
-        };
+        await prisma.message.create({ data: { agentId, role: 'assistant', message: fallbackMessage } });
+        return { message: fallbackMessage, usage: null, note: 'Served from local fallback due to provider quota/rate limit.' };
       }
       throw err;
     }
 
-    // Detect content types in assistant reply and persist to content feed
+    // Detect content types and persist
     const lower = assistantMessage.toLowerCase();
     const detectors: Array<{ type: string; test: (t: string) => boolean }> = [
       { type: 'caption', test: (t) => /\bcaption\b/.test(t) || /#\w+/.test(t) },
@@ -273,9 +212,7 @@ export class AIService {
       code: 'Code',
     };
 
-    const stripLeadingLabel = (text: string, label: string) =>
-      text.replace(new RegExp(`^\\s*${label}\\s*:\\s*`, 'i'), '').trim();
-
+    const stripLeadingLabel = (text: string, label: string) => text.replace(new RegExp(`^\\s*${label}\\s*:\\s*`, 'i'), '').trim();
     const extractCode = (text: string) => {
       const fenceMatch = text.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
       if (fenceMatch) return fenceMatch[1].trim();
@@ -285,20 +222,12 @@ export class AIService {
     if (matched) {
       const label = typeLabelMap[matched.type] || 'Content';
       cleanedForContent = stripLeadingLabel(assistantMessage, label);
-      if (matched.type === 'code') {
-        cleanedForContent = extractCode(assistantMessage);
-      }
+      if (matched.type === 'code') cleanedForContent = extractCode(assistantMessage);
       labeledForChat = `${label}: ${cleanedForContent}`;
     }
 
     // Store assistant response (with label if detected)
-    await prisma.message.create({
-      data: {
-        agentId,
-        role: 'assistant',
-        message: labeledForChat,
-      },
-    });
+    await prisma.message.create({ data: { agentId, role: 'assistant', message: labeledForChat } });
 
     if (matched) {
       try {
@@ -306,12 +235,7 @@ export class AIService {
           data: {
             agentId,
             type: matched.type,
-            data: JSON.stringify({
-              prompt: 'Detected from chat reply',
-              content: cleanedForContent,
-              status: 'draft',
-              generatedAt: new Date().toISOString(),
-            }),
+            data: JSON.stringify({ prompt: 'Detected from chat reply', content: cleanedForContent, status: 'draft', generatedAt: new Date().toISOString() }),
           },
         });
       } catch (e: any) {
@@ -319,11 +243,7 @@ export class AIService {
       }
     }
 
-    return {
-      message: labeledForChat,
-      usage,
-      detectedType: matched?.type || null,
-    };
+    return { message: labeledForChat, usage, detectedType: matched?.type || null };
   }
 
   /**
