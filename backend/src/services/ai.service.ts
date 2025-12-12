@@ -403,6 +403,79 @@ export class AIService {
   }
 
   /**
+   * Get filtered content across all agents
+   */
+  static async getFilteredContent(params: {
+    agentId?: string;
+    type?: string;
+    limit: number;
+    userId: string;
+  }) {
+    const { agentId, type, limit, userId } = params;
+
+    // Build where clause
+    const where: any = {};
+    
+    if (agentId) {
+      // Verify agent ownership
+      const agent = await prisma.agent.findFirst({
+        where: {
+          id: agentId,
+          business: { userId },
+        },
+      });
+      if (!agent) {
+        throw new Error('Agent not found');
+      }
+      where.agentId = agentId;
+    } else {
+      // Get all agents for user
+      const agents = await prisma.agent.findMany({
+        where: {
+          business: { userId },
+        },
+        select: { id: true },
+      });
+      where.agentId = { in: agents.map((a) => a.id) };
+    }
+
+    if (type) {
+      where.type = type;
+    }
+
+    const contents = await prisma.content.findMany({
+      where,
+      include: {
+        agent: {
+          select: {
+            id: true,
+            agentName: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+      take: limit,
+    });
+
+    // Transform to match frontend format
+    return contents.map((content) => {
+      const data = JSON.parse(content.data || '{}');
+      return {
+        id: content.id,
+        agentId: content.agentId,
+        agentName: content.agent.agentName,
+        type: content.type,
+        platform: data.platform,
+        content: data.text || data.caption || '',
+        media: data.media || [],
+        status: data.status || 'draft',
+        createdAt: content.createdAt.toISOString(),
+        engagement: data.engagement || {},
+      };
+    });
+  }
+
+  /**
    * Generate AI image using external API
    * Using Pollinations.ai (free, no API key needed) or DeepSeek
    */

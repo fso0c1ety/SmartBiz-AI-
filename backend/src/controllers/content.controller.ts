@@ -39,4 +39,19 @@ export class ContentController {
       res.status(404).json({ error: error.message });
     }
   }
+
+  static async getAllContent(req: AuthRequest, res: Response): Promise<void> {
+    try {
+      const { agentId, type, limit } = req.query;
+      const contents = await AIService.getFilteredContent({
+        agentId: agentId as string,
+        type: type as string,
+        limit: limit ? parseInt(limit as string) : 50,
+        userId: req.userId!,
+      });
+      res.status(200).json({ success: true, contents });
+    } catch (error: any) {
+      res.status(400).json({ success: false, error: error.message });
+    }
+  }
 }

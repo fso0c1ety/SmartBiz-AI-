@@ -17,9 +17,15 @@ const createValidation = [
 
 // Routes
 router.post('/create', validate(createValidation), AgentController.create);
+router.post('/enhanced', AgentController.createEnhanced);
 router.get('/:id', AgentController.getById);
 router.get('/by-business/:businessId', AgentController.getByBusiness);
 router.delete('/:id', AgentController.delete);
 router.post('/:id/update-memory', AgentController.updateMemory);
+router.post('/:id/generate', AgentController.generateContent);
+router.post('/:id/post', AgentController.postToSocial);
+router.post('/:id/email', AgentController.sendEmail);
+router.post('/:id/leads', AgentController.findLeads);
+router.get('/:id/activity', AgentController.getActivity);
 
 export default router;

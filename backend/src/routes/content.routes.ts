@@ -27,5 +27,6 @@ const imageValidation = [
 router.post('/:id/content/create', validate(generateValidation), ContentController.generate);
 router.post('/:id/image/generate', validate(imageValidation), ContentController.generateImage);
 router.get('/:id/content/all', ContentController.getAll);
+router.get('/', ContentController.getAllContent); // Get all content with filters
 
 export default router;

@@ -1,5 +1,17 @@
 import axios from 'axios';
 import { API_CONFIG } from '../config/api.config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const TOKEN_KEY = '@smartbiz_token';
+
+// Helper to get auth token
+const getAuthHeaders = async () => {
+  const token = await AsyncStorage.getItem(TOKEN_KEY);
+  return {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` }),
+  };
+};
 
 export interface CreateEnhancedAgentPayload {
   type: 'marketing' | 'sales' | 'support' | 'content';
@@ -56,21 +68,17 @@ export interface ContentConfig {
  */
 export const createEnhancedAgent = async (payload: CreateEnhancedAgentPayload) => {
   try {
+    const headers = await getAuthHeaders();
     const response = await axios.post(
       `${API_CONFIG.baseURL}/agents/enhanced`,
       payload,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-          // Add auth token if available
-          // 'Authorization': `Bearer ${token}`,
-        },
-      }
+      { headers }
     );
     return response.data;
   } catch (error: any) {
+    console.error('Create agent error:', error.response?.data || error.message);
     throw new Error(
-      error.response?.data?.message || 'Failed to create AI agent'
+      error.response?.data?.error || error.response?.data?.message || 'Failed to create AI agent'
     );
   }
 };
@@ -85,6 +93,7 @@ export const generateContent = async (params: {
   keywords?: string[];
 }) => {
   try {
+    const headers = await getAuthHeaders();
     const response = await axios.post(
       `${API_CONFIG.baseURL}/agents/${params.agentId}/generate`,
       {
@@ -92,16 +101,12 @@ export const generateContent = async (params: {
         prompt: params.prompt,
         keywords: params.keywords,
       },
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      { headers }
     );
     return response.data;
   } catch (error: any) {
     throw new Error(
-      error.response?.data?.message || 'Failed to generate content'
+      error.response?.data?.error || error.response?.data?.message || 'Failed to generate content'
     );
   }
 };
@@ -234,6 +239,7 @@ export const getGeneratedContent = async (params: {
   limit?: number;
 }) => {
   try {
+    const headers = await getAuthHeaders();
     const queryParams = new URLSearchParams();
     if (params.agentId) queryParams.append('agentId', params.agentId);
     if (params.type) queryParams.append('type', params.type);
@@ -241,16 +247,12 @@ export const getGeneratedContent = async (params: {
 
     const response = await axios.get(
       `${API_CONFIG.baseURL}/content?${queryParams.toString()}`,
-      {
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      }
+      { headers }
     );
     return response.data;
   } catch (error: any) {
     throw new Error(
-      error.response?.data?.message || 'Failed to get content'
+      error.response?.data?.error || error.response?.data?.message || 'Failed to get content'
     );
   }
 };

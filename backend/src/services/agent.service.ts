@@ -126,4 +126,135 @@ export class AgentService {
 
     return updatedAgent;
   }
+
+  static async createEnhancedAgent(input: any) {
+    const { type, basicInfo, config, userId } = input;
+
+    // Create or find business
+    let business = await prisma.business.findFirst({
+      where: {
+        userId,
+        name: basicInfo.businessName,
+      },
+    });
+
+    if (!business) {
+      business = await prisma.business.create({
+        data: {
+          userId,
+          name: basicInfo.businessName,
+          industry: basicInfo.industry,
+          description: basicInfo.description,
+          targetAudience: basicInfo.targetAudience,
+          brandTone: basicInfo.brandTone || 'professional',
+        },
+      });
+    }
+
+    // Create agent with enhanced config
+    const agentTypeNames: Record<string, string> = {
+      marketing: 'Marketing AI',
+      sales: 'Sales AI',
+      support: 'Support AI',
+      content: 'Content Writer AI',
+    };
+
+    const memoryProfile = {
+      ...basicInfo,
+      type,
+      config,
+      createdAt: new Date().toISOString(),
+    };
+
+    const agent = await prisma.agent.create({
+      data: {
+        businessId: business.id,
+        agentName: agentTypeNames[type] || 'AI Agent',
+        memory: JSON.stringify(memoryProfile),
+      },
+    });
+
+    return agent;
+  }
+
+  static async generateContent(agentId: string, params: any, userId: string) {
+    const agent = await this.getAgentById(agentId, userId);
+    
+    // This would integrate with DeepSeek API
+    // For now, return mock data
+    const content = await prisma.content.create({
+      data: {
+        agentId,
+        type: params.contentType || 'post',
+        data: JSON.stringify({
+          text: 'Generated content placeholder',
+          prompt: params.prompt,
+          keywords: params.keywords,
+        }),
+      },
+    });
+
+    return {
+      id: content.id,
+      text: 'Generated content placeholder',
+      type: params.contentType,
+      status: 'draft',
+    };
+  }
+
+  static async postToSocialMedia(agentId: string, params: any, userId: string) {
+    const agent = await this.getAgentById(agentId, userId);
+    
+    // This would integrate with social media APIs
+    return {
+      postId: 'mock_post_id',
+      url: `https://${params.platform}.com/post/mock`,
+    };
+  }
+
+  static async sendEmail(agentId: string, params: any, userId: string) {
+    const agent = await this.getAgentById(agentId, userId);
+    
+    // This would integrate with SMTP
+    return {
+      messageId: 'mock_message_id',
+    };
+  }
+
+  static async findLeads(agentId: string, params: any, userId: string) {
+    const agent = await this.getAgentById(agentId, userId);
+    
+    // This would integrate with lead APIs
+    return [
+      {
+        id: '1',
+        name: 'Sample Lead',
+        industry: params.criteria.industry,
+        email: 'lead@example.com',
+        score: 85,
+      },
+    ];
+  }
+
+  static async getAgentActivity(agentId: string, userId: string) {
+    const agent = await this.getAgentById(agentId, userId);
+    
+    const contents = await prisma.content.findMany({
+      where: { agentId },
+      orderBy: { createdAt: 'desc' },
+      take: 10,
+    });
+
+    return {
+      status: 'active',
+      currentTask: 'Generating content',
+      progress: 0.75,
+      tasksCompleted: contents.length,
+      tasksToday: contents.filter(
+        (c) =>
+          new Date(c.createdAt).toDateString() === new Date().toDateString()
+      ).length,
+      lastActive: new Date().toISOString(),
+    };
+  }
 }
