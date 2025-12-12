@@ -109,12 +109,15 @@ export class AIService {
    */
   static async chat(input: ChatInput) {
     ensureProviderConfigured();
-
+    
     const { agentId, message, userId } = input;
 
     // Verify agent ownership
     const agent = await prisma.agent.findFirst({
-      where: { id: agentId, business: { userId } },
+      where: {
+        id: agentId,
+        business: { userId },
+      },
       include: { business: true },
     });
 
@@ -127,61 +130,82 @@ export class AIService {
     const isImageRequest = imageKeywords.test(message);
 
     if (isImageRequest) {
+      // Extract the image description from the message
       const imagePrompt = message.replace(/^(please|can you|could you|i want you to|i need you to|do that)\s+/i, '').trim();
+      
       console.log('🎨 Image request detected:', imagePrompt);
+      
       try {
-        const imageResult = await this.generateImage({ agentId, prompt: imagePrompt, userId });
+        // Generate the image
+        const imageResult = await this.generateImage({
+          agentId,
+          prompt: imagePrompt,
+          userId,
+        });
+
+        console.log('✅ Image generated:', imageResult.imageUrl);
 
         // Store user message
-        await prisma.message.create({ data: { agentId, role: 'user', message } });
+        await prisma.message.create({
+          data: {
+            agentId,
+            role: 'user',
+            message,
+          },
+        });
 
-        // Assistant acknowledgement
-        const assistantMsg = `I've created a professional image for your brand.`;
-        await prisma.message.create({ data: { agentId, role: 'assistant', message: assistantMsg } });
+        // Create assistant response with structured image data
+        const assistantMessage = `I've created a professional image for your brand.`;
+        
+        await prisma.message.create({
+          data: {
+            agentId,
+            role: 'assistant',
+            message: assistantMessage,
+          },
+        });
 
         return {
-          message: assistantMsg,
+          message: assistantMessage,
           type: 'image',
           imageUrl: imageResult.imageUrl,
-          imagePrompt,
+          imagePrompt: imagePrompt,
           usage: null,
         };
       } catch (error: any) {
+        // If image generation fails, fall back to text response
         console.error('❌ Image generation failed:', error.message);
-        // continue to normal chat fallback
       }
     }
 
     // Store user message
-    await prisma.message.create({ data: { agentId, role: 'user', message } });
+    await prisma.message.create({
+      data: {
+        agentId,
+        role: 'user',
+        message,
+      },
+    });
 
     // Build AI context with memory
-    const { systemPrompt, recentMessages } = await AIMemoryService.buildAIContext(agentId, message);
+    const { systemPrompt, recentMessages } = await AIMemoryService.buildAIContext(
+      agentId,
+      message
+    );
 
-    // Infer desired output type from the user's prompt to enforce strict-only output
-    const userType = (() => {
-      const m = message.toLowerCase();
-      if (/\b(email|mail|compose)\b/.test(m)) return 'email';
-      if (/\b(code|function|snippet|script)\b/.test(m)) return 'code';
-      if (/\b(caption|instagram|ig caption)\b/.test(m)) return 'caption';
-      if (/\b(post|tweet|social post)\b/.test(m)) return 'post';
-      if (/\b(blog|article|intro)\b/.test(m)) return 'blog';
-      if (/\b(ad|advert|advertisement|copy)\b/.test(m)) return 'ad';
-      return null;
-    })();
-
+    // Prepare conversation history
     const conversationHistory = recentMessages.map((msg) => ({
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.message,
     }));
 
-    // Call provider
+    // Call provider; fallback locally if quota exceeded
     let assistantMessage = '';
     let usage: any = null;
     try {
       const completion = await createChatCompletion({
         messages: [
-          { role: 'system', content: `${systemPrompt}${userType ? `\n\nSTRICT OUTPUT RULES: You must output ONLY the ${userType} content. Do NOT add any explanations, prefacing text, meta commentary, or extras. For email: include 'Subject:' line then the body. For code: return ONLY code (optionally fenced). For caption/post/ad/blog: return ONLY the formatted text. No pre/post remarks.` : ''}` },
+          { role: 'system', content: systemPrompt },
           ...conversationHistory,
           { role: 'user', content: message },
         ],
@@ -194,13 +218,35 @@ export class AIService {
       const status = err?.status || err?.response?.status;
       if (status === 429 || /quota/i.test(err?.message || '')) {
         const fallbackMessage = `I'm currently at capacity. Here's a quick on-brand reply: ${message}`;
-        await prisma.message.create({ data: { agentId, role: 'assistant', message: fallbackMessage } });
-        return { message: fallbackMessage, usage: null, note: 'Served from local fallback due to provider quota/rate limit.' };
+        assistantMessage = fallbackMessage;
+        usage = null;
+
+        await prisma.message.create({
+          data: {
+            agentId,
+            role: 'assistant',
+            message: fallbackMessage,
+          },
+        });
+
+        return {
+          message: fallbackMessage,
+          usage: null,
+          note: 'Served from local fallback due to provider quota/rate limit.',
+        };
       }
       throw err;
     }
 
-    // Detect content types and persist
+    // Store assistant response
+    await prisma.message.create({
+      data: {
+        agentId,
+        role: 'assistant',
+        message: assistantMessage,
+      },
+    });
+    // Detect content types in assistant reply and persist to content feed
     const lower = assistantMessage.toLowerCase();
     const detectors: Array<{ type: string; test: (t: string) => boolean }> = [
       { type: 'caption', test: (t) => /\bcaption\b/.test(t) || /#\w+/.test(t) },
@@ -211,96 +257,32 @@ export class AIService {
       { type: 'code', test: (t) => /```|\bfunction\b|\bconst\b|\bclass\b/.test(t) },
     ];
 
-    let matched = detectors.find((d) => d.test(lower));
-    let labeledForChat = assistantMessage;
-    let cleanedForContent = assistantMessage;
-
-    const typeLabelMap: Record<string, string> = {
-      caption: 'Caption',
-      post: 'Post',
-      email: 'Email',
-      blog: 'Blog',
-      ad: 'Ad',
-      code: 'Code',
-    };
-
-    const stripLeadingLabel = (text: string, label: string) => text.replace(new RegExp(`^\\s*${label}\\s*:\\s*`, 'i'), '').trim();
-    const stripMetaCommentary = (text: string) => {
-      // Remove common meta lines the model might add
-      const lines = text.split(/\r?\n/).filter((ln) => !/(here you go|let me know|you can tweak|adjust as needed|hope this helps)/i.test(ln));
-      return lines.join('\n').trim();
-    };
-    const extractCode = (text: string) => {
-      const fenceMatch = text.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
-      if (fenceMatch) return fenceMatch[1].trim();
-      return text.trim();
-    };
-    const sanitizeOutput = (kind: string | null, text: string) => {
-      if (!kind) return text.trim();
-      const t = text.trim();
-      if (kind === 'email') {
-        // Keep Subject line and body only
-        const subjectMatch = t.match(/subject:\s*(.*)/i);
-        const subject = subjectMatch ? subjectMatch[1].trim() : '';
-        // Body: everything after the Subject: line
-        const body = t.replace(/^[\s\S]*?subject:.*\n?/i, '').trim();
-        const cleanBody = stripMetaCommentary(body).replace(/^[-*_\s]+$/gm, '').trim();
-        return `${subject ? `Subject: ${subject}\n\n` : ''}${cleanBody}`.trim();
-      }
-      if (kind === 'code') {
-        return extractCode(t);
-      }
-      // caption/post/ad/blog: return only text, remove headings/separators
-      const cleaned = stripMetaCommentary(t)
-        .replace(/^\s*[*_-]{2,}\s*$/gm, '')
-        .replace(/^\s*\*\*.*\*\*\s*$/gm, '')
-        .trim();
-      return cleaned;
-    };
-
-    const markers: Record<string, { start: string; end: string }> = {
-      caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
-      post: { start: '<<POST_START>>', end: '<<POST_END>>' },
-      email: { start: '<<EMAIL_START>>', end: '<<EMAIL_END>>' },
-      blog: { start: '<<BLOG_START>>', end: '<<BLOG_END>>' },
-      ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
-      code: { start: '<<CODE_START>>', end: '<<CODE_END>>' },
-    };
-
-    // Strong fallback detection to ensure markers are present
-    if (!matched) {
-      if (/subject:\s/i.test(assistantMessage) || /\bdear\b/i.test(assistantMessage)) {
-        matched = { type: 'email', test: () => true } as any;
-      } else if (/```/.test(assistantMessage)) {
-        matched = { type: 'code', test: () => true } as any;
-      } else if (/#\w+/.test(assistantMessage)) {
-        matched = { type: 'caption', test: () => true } as any;
-      } else if (/\b(post|tweet|social\s+post)\b/i.test(assistantMessage)) {
-        matched = { type: 'post', test: () => true } as any;
-      } else if (/\b(ad|advertisement|cta|call to action)\b/i.test(assistantMessage)) {
-        matched = { type: 'ad', test: () => true } as any;
-      } else if (/\b(blog|introduction|outline)\b/i.test(assistantMessage)) {
-        matched = { type: 'blog', test: () => true } as any;
-      }
-    }
-
-    if (matched) {
-      const label = typeLabelMap[matched.type] || 'Content';
-      cleanedForContent = sanitizeOutput(matched.type, stripLeadingLabel(assistantMessage, label));
-      const { start, end } = markers[matched.type];
-      labeledForChat = `${label}:\n${start}\n${cleanedForContent}\n${end}`;
-    }
-
-    // Store assistant response (with label if detected)
-    await prisma.message.create({ data: { agentId, role: 'assistant', message: labeledForChat } });
-
+    const matched = detectors.find((d) => d.test(lower));
     if (matched) {
       try {
+        let subject: string | undefined;
+        let body: string | undefined;
+
+        if (matched.type === 'email') {
+          // Try to extract Subject and Body blocks
+          const subjectMatch = assistantMessage.match(/subject\s*:\s*(.*)/i);
+          const bodyMatch = assistantMessage.match(/body\s*:\s*([\s\S]*)/i);
+          subject = subjectMatch?.[1]?.trim();
+          body = bodyMatch?.[1]?.trim() || assistantMessage.trim();
+        }
+
         await prisma.content.create({
           data: {
             agentId,
             type: matched.type,
-            data: JSON.stringify({ prompt: 'Detected from chat reply', content: cleanedForContent, status: 'draft', generatedAt: new Date().toISOString() }),
+            data: JSON.stringify({
+              prompt: 'Detected from chat reply',
+              content: assistantMessage,
+              ...(subject ? { subject } : {}),
+              ...(body ? { body } : {}),
+              status: 'draft',
+              generatedAt: new Date().toISOString(),
+            }),
           },
         });
       } catch (e: any) {
@@ -308,7 +290,11 @@ export class AIService {
       }
     }
 
-    return { message: labeledForChat, usage, detectedType: matched?.type || null };
+    return {
+      message: assistantMessage,
+      usage,
+      detectedType: matched?.type || null,
+    };
   }
 
   /**
@@ -344,7 +330,7 @@ export class AIService {
       email: `Write a professional email about: ${prompt}\n\nKeep it concise and actionable.`,
     };
 
-    const contentPrompt = `${contentPrompts[type] || prompt}\n\nSTRICT OUTPUT RULES: Output ONLY the ${type} content. No explanations or meta text. For email: include 'Subject:' then body. For code: only the code (optionally fenced). For caption/post/ad/blog: only the formatted text.`;
+    const contentPrompt = contentPrompts[type] || prompt;
 
     // Generate content
     let generatedContent = '';
@@ -362,18 +348,6 @@ export class AIService {
         maxTokens: 1500,
       });
       generatedContent = completion.content;
-      // Add explicit markers to generated content for consistent parsing
-      const genMarkers: Record<string, { start: string; end: string }> = {
-        caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
-        post: { start: '<<POST_START>>', end: '<<POST_END>>' },
-        email: { start: '<<EMAIL_START>>', end: '<<EMAIL_END>>' },
-        blog: { start: '<<BLOG_START>>', end: '<<BLOG_END>>' },
-        ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
-      };
-      if (genMarkers[type]) {
-        const { start, end } = genMarkers[type];
-        generatedContent = `${start}\n${generatedContent}\n${end}`;
-      }
       usage = completion.usage;
     } catch (err: any) {
       const status = err?.status || err?.response?.status;
@@ -537,6 +511,8 @@ export class AIService {
         type: content.type,
         platform: data.platform,
         content: data.content || data.text || data.caption || '',
+        subject: data.subject,
+        body: data.body,
         media: data.media || [],
         status: data.status || 'draft',
         createdAt: content.createdAt.toISOString(),

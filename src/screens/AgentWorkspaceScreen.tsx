@@ -340,63 +340,6 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
-    // Detect labeled content types in assistant messages and render with wrappers
-    const detectKind = (text: string) => {
-      const lower = text.toLowerCase();
-      // Prefer explicit markers
-      if (lower.includes('<<caption_start>>')) return 'caption';
-      if (lower.includes('<<post_start>>')) return 'post';
-      if (lower.includes('<<email_start>>')) return 'email';
-      if (lower.includes('<<blog_start>>')) return 'blog';
-      if (lower.includes('<<ad_start>>')) return 'ad';
-      if (lower.includes('<<code_start>>')) return 'code';
-      // Fallback to label prefixes
-      if (lower.startsWith('caption:')) return 'caption';
-      if (lower.startsWith('post:')) return 'post';
-      if (lower.startsWith('email:')) return 'email';
-      if (lower.startsWith('blog:')) return 'blog';
-      if (lower.startsWith('ad:')) return 'ad';
-      if (lower.startsWith('code:')) return 'code';
-      return 'text';
-    };
-
-    const stripLabel = (text: string) => text.replace(/^\s*([A-Za-z]+)\s*:\s*/i, '').trim();
-    const extractBetweenMarkers = (text: string, start: string, end: string) => {
-      // Robust extraction using regex; returns inner content only
-      const pattern = new RegExp(`${start.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([\s\S]*?)${end.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, 'i');
-      const match = text.match(pattern);
-      if (match && match[1]) {
-        return match[1].trim();
-      }
-      // Index-based fallback (case-insensitive)
-      const lower = text.toLowerCase();
-      const sIdx = lower.indexOf(start.toLowerCase());
-      const eIdx = lower.indexOf(end.toLowerCase());
-      if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
-        const inner = text.substring(sIdx + start.length, eIdx);
-        return inner.trim();
-      }
-      // Fallback: remove label prefix if markers missing
-      return stripLabel(text);
-    };
-
-    const kind = !item.isUser ? detectKind(item.text) : 'text';
-    let contentText = !item.isUser ? stripLabel(item.text) : item.text;
-    if (!item.isUser) {
-      const markerMap: Record<string, { start: string; end: string }> = {
-        caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
-        post: { start: '<<POST_START>>', end: '<<POST_END>>' },
-        email: { start: '<<EMAIL_START>>', end: '<<EMAIL_END>>' },
-        blog: { start: '<<BLOG_START>>', end: '<<BLOG_END>>' },
-        ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
-        code: { start: '<<CODE_START>>', end: '<<CODE_END>>' },
-      };
-      if (markerMap[kind]) {
-        const { start, end } = markerMap[kind];
-        contentText = extractBetweenMarkers(item.text, start, end);
-      }
-    }
-
     // If it's an image type message, render it as an image
     if (item.type === 'image' && item.imageUrl) {
       return (
@@ -468,82 +411,6 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         return <Text key={index}>{part}</Text>;
       });
     };
-
-    // Specialized rendering
-    if (!item.isUser) {
-      // Code block (only when explicitly labeled)
-      if (kind === 'code') {
-        const codeMatch = contentText.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
-        const code = (codeMatch ? codeMatch[1] : contentText).trim();
-        return (
-          <View style={[styles.messageRow, styles.aiMessageRow]}>
-            <Image source={getAgentLogoSource()} style={styles.aiAvatarSmall} />
-            <View style={[styles.messageContent]}>
-              <View style={[styles.messageBubble, { backgroundColor: colors.surface }]}> 
-                <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>Code</Text>
-                <View style={[styles.codeContainer, { backgroundColor: colorScheme === 'dark' ? '#0B0F19' : '#F5F7FA', borderColor: colors.border }]}> 
-                  <Text style={[styles.codeText, { color: colors.text }]}>{code}</Text>
-                  <View style={styles.blockActions}>
-                    <TouchableOpacity style={styles.blockButton} onPress={() => handleCopyMessage(code)}>
-                      <Ionicons name="copy" size={14} color={colors.textSecondary} />
-                      <Text style={[styles.blockButtonText, { color: colors.textSecondary }]}>Copy code</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        );
-      }
-
-      // Email (only when explicitly labeled)
-      if (kind === 'email') {
-        const subjectMatch = contentText.match(/subject:\s*(.*)/i);
-        const body = contentText.replace(/subject:.*\n?/i, '').trim();
-        const subject = subjectMatch ? subjectMatch[1].trim() : 'Email';
-        return (
-          <View style={[styles.messageRow, styles.aiMessageRow]}>
-            <Image source={getAgentLogoSource()} style={styles.aiAvatarSmall} />
-            <View style={[styles.messageContent]}>
-              <View style={[styles.messageBubble, { backgroundColor: colors.surface }]}> 
-                <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>Email</Text>
-                <View style={[styles.emailCard, { borderColor: colors.border, backgroundColor: colorScheme === 'dark' ? '#0B0F19' : '#FFFFFF' }]}> 
-                  <Text style={[styles.emailSubject, { color: colors.text }]}>{subject}</Text>
-                  <Text style={[styles.emailBody, { color: colors.textSecondary }]}>{body}</Text>
-                  <View style={styles.blockActions}>
-                    <TouchableOpacity style={styles.blockButton} onPress={() => handleCopyMessage(`${subject}\n\n${body}`)}>
-                      <Ionicons name="copy" size={14} color={colors.textSecondary} />
-                      <Text style={[styles.blockButtonText, { color: colors.textSecondary }]}>Copy email</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              </View>
-            </View>
-          </View>
-        );
-      }
-
-      // Caption / Post / Ad / Blog simple wrappers
-      const labelMap: Record<string, string> = {
-        caption: 'Caption',
-        post: 'Post',
-        ad: 'Ad',
-        blog: 'Blog',
-      };
-      if (kind !== 'text') {
-        return (
-          <View style={[styles.messageRow, styles.aiMessageRow]}>
-            <Image source={getAgentLogoSource()} style={styles.aiAvatarSmall} />
-            <View style={[styles.messageContent]}>
-              <View style={[styles.messageBubble, { backgroundColor: colors.surface }]}> 
-                <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>{labelMap[kind] || 'Content'}</Text>
-                <Text style={[styles.messageText, { color: colors.text }]}>{contentText}</Text>
-              </View>
-            </View>
-          </View>
-        );
-      }
-    }
 
     // Regular text message rendering
     return (
@@ -846,54 +713,6 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: FontSize.base,
     lineHeight: 24,
-  },
-  messageLabel: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.semibold,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  codeContainer: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-  },
-  codeText: {
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-    fontSize: FontSize.sm,
-    lineHeight: 20,
-  },
-  emailCard: {
-    borderWidth: 1,
-    borderRadius: BorderRadius.md,
-    padding: Spacing.md,
-    gap: Spacing.xs,
-  },
-  emailSubject: {
-    fontSize: FontSize.base,
-    fontWeight: FontWeight.semibold,
-  },
-  emailBody: {
-    fontSize: FontSize.sm,
-    lineHeight: 20,
-  },
-  blockActions: {
-    flexDirection: 'row',
-    gap: Spacing.xs,
-    marginTop: Spacing.sm,
-  },
-  blockButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: Spacing.sm,
-    paddingVertical: 4,
-    borderRadius: BorderRadius.sm,
-  },
-  blockButtonText: {
-    fontSize: FontSize.xs,
-    fontWeight: FontWeight.medium,
   },
   linkText: {
     textDecorationLine: 'underline',

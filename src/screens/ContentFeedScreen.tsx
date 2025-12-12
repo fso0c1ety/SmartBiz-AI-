@@ -31,6 +31,8 @@ interface GeneratedContent {
   type: 'post' | 'caption' | 'email' | 'blog' | 'ad' | 'code' | 'image';
   platform?: 'instagram' | 'tiktok' | 'twitter' | 'facebook' | 'linkedin';
   content: string;
+  subject?: string;
+  body?: string;
   media?: string[];
   status: 'draft' | 'published' | 'scheduled';
   createdAt: string;
@@ -185,9 +187,24 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         </View>
 
         {/* Content */}
-        <Text style={[styles.contentText, { color: colors.text }]}>
-          {item.content}
-        </Text>
+        {item.type === 'email' ? (
+          <View style={{ gap: Spacing.sm }}>
+            {item.subject && (
+              <View>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>Subject</Text>
+                <Text style={[styles.contentText, { color: colors.text }]}>{item.subject}</Text>
+              </View>
+            )}
+            <View>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>Body</Text>
+              <Text style={[styles.contentText, { color: colors.text }]}>{item.body || item.content}</Text>
+            </View>
+          </View>
+        ) : (
+          <Text style={[styles.contentText, { color: colors.text }]}>
+            {item.content}
+          </Text>
+        )}
 
         {/* Media */}
         {item.media && item.media.length > 0 && (
@@ -456,6 +473,12 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
     lineHeight: 24,
     marginBottom: Spacing.md,
+  },
+  sectionTitle: {
+    fontSize: FontSize.sm,
+    fontWeight: FontWeight.semibold,
+    marginBottom: 4,
+    textTransform: 'capitalize',
   },
   mediaScroll: {
     marginBottom: Spacing.md,
