@@ -602,7 +602,25 @@ export class AIService {
       orderBy: { createdAt: 'asc' },
     });
 
-    return messages;
+    // Attach media by looking up related image content created from this messageId
+    const withMedia = await Promise.all(messages.map(async (m) => {
+      try {
+        const linked = await prisma.content.findFirst({
+          where: { agentId, type: 'image' },
+          orderBy: { createdAt: 'desc' },
+        });
+        if (!linked) return m as any;
+        const data = JSON.parse(linked.data || '{}');
+        const fromId = data.fromMessageId;
+        const media = data.media || [];
+        if (fromId && String(fromId) === String(m.id) && media.length > 0) {
+          return { ...m, media } as any;
+        }
+      } catch {}
+      return m as any;
+    }));
+
+    return withMedia;
   }
 
   /**
