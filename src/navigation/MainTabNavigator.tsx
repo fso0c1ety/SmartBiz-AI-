@@ -10,7 +10,7 @@ import { BorderRadius, Spacing } from '../constants/spacing';
 // Screens
 import { DashboardScreen } from '../screens/DashboardScreen';
 import { HomeScreen } from '../screens/HomeScreen';
-import { GeneratedContentScreen } from '../screens/GeneratedContentScreen';
+import { ContentFeedScreen } from '../screens/ContentFeedScreen';
 import { ProfileScreen } from '../screens/ProfileScreen';
 
 const Tab = createBottomTabNavigator();
@@ -74,7 +74,7 @@ export const MainTabNavigator = () => {
       
       <Tab.Screen
         name="Content"
-        component={GeneratedContentScreen}
+        component={ContentFeedScreen}
         options={{
           tabBarIcon: ({ color, size, focused }) => (
             <View style={styles.tabIconContainer}>
