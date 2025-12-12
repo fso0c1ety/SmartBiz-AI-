@@ -703,10 +703,29 @@ export class AIService {
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
-
+    // Fetch relational media (fallback) and merge
+    const ids = contents.map((c) => c.id);
+    let mediaRows: Array<any> = [];
+    try {
+      // Using raw query to avoid Prisma 7 migration hurdles
+      const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+      if (ids.length > 0) {
+        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE contentId IN (${placeholders}) ORDER BY createdAt DESC`, ...ids);
+      }
+    } catch (e: any) {
+      console.warn('⚠️ Failed to query media rows:', e?.message || e);
+    }
+    const byContent: Record<string, Array<string>> = {};
+    for (const r of mediaRows) {
+      const arr = byContent[r.contentid] || []; // note: column names may be lowercased
+      const uri = r.url || (r.base64 ? `data:${r.mimetype || 'image/png'};base64,${r.base64}` : null);
+      if (uri) arr.push(uri);
+      byContent[r.contentid] = arr;
+    }
     // Transform to match frontend format
     return contents.map((content) => {
       const data = JSON.parse(content.data || '{}');
+      const mergedMedia = byContent[content.id] || [];
       return {
         id: content.id,
         agentId: content.agentId,
@@ -717,7 +736,7 @@ export class AIService {
         imageUrl: data.imageUrl,
         subject: data.subject,
         body: data.body,
-        media: data.media || [],
+        media: (data.media && data.media.length ? data.media : mergedMedia),
         status: data.status || 'draft',
         createdAt: content.createdAt.toISOString(),
         engagement: data.engagement || {},
@@ -749,6 +768,25 @@ export class AIService {
     if (!message) throw new Error('Message not found');
     if (message.agent.business.userId !== userId) throw new Error('Unauthorized');
     const uris = (media || []).map((m: any) => typeof m === 'string' ? m : (m.base64 || m.url)).filter(Boolean);
+    // Persist to media table (fallback when available)
+    try {
+      for (const m of uris) {
+        const isData = /^data:image\//i.test(m);
+        const isHttp = /^https?:\/\//i.test(m);
+        const mime = isData ? (m.split(';')[0].replace('data:', '') || 'image/png') : null;
+        const base64 = isData ? m.split(',')[1] : null;
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO media (agentId, messageId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+          message.agentId,
+          messageId,
+          isHttp ? m : null,
+          base64,
+          mime
+        );
+      }
+    } catch (e: any) {
+      console.warn('⚠️ Failed to insert media rows:', e?.message || e);
+    }
     // Try to find an existing content referencing this message
     const existing = await prisma.content.findFirst({ where: { agentId: message.agentId, type: 'image' } });
     const payload = {
@@ -944,6 +982,24 @@ export class AIService {
           }),
         },
       });
+      // Also persist to media table for relational retrieval
+      try {
+        const first = base64Image ? base64Image : imageUrl;
+        const isData = /^data:image\//i.test(first);
+        const isHttp = /^https?:\/\//i.test(first);
+        const mime = isData ? (first.split(';')[0].replace('data:', '') || 'image/png') : null;
+        const base64 = isData ? first.split(',')[1] : null;
+        await prisma.$executeRawUnsafe(
+          `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+          agentId,
+          content.id,
+          isHttp ? first : null,
+          base64,
+          mime
+        );
+      } catch (e: any) {
+        console.warn('⚠️ Failed to insert content media row:', e?.message || e);
+      }
       return { content, imageUrl, imageDataUrl: base64Image || null, usage: null };
     } catch (err: any) {
       console.error('❌ Image generation error:', err.message);
