@@ -721,8 +721,17 @@ export class AIService {
       throw new Error('Agent not found');
     }
 
-    // Enhance prompt with business context
-    const enhancedPrompt = `${prompt}. Brand: ${agent.business.name}. Style: ${agent.business.brandTone || 'professional'}`;
+    // Enhance prompt with business context and add guardrails to avoid unintended human subjects or biased defaults
+    let enhancedPrompt = `${prompt}. Brand: ${agent.business.name}. Style: ${agent.business.brandTone || 'professional'}`;
+    const normalized = prompt.toLowerCase();
+    const mentionsPerson = /(person|people|man|woman|male|female|guy|girl|model|portrait|face|headshot|human)/i.test(normalized);
+    if (!mentionsPerson) {
+      enhancedPrompt += '. No human subjects. Focus on typography, abstract graphics, product or brand elements.';
+    } else {
+      enhancedPrompt += '. Avoid stereotypes. Neutral, inclusive depiction. No specific ethnicity unless explicitly requested.';
+    }
+    // Encourage neutral background and brand colors to reduce provider defaults
+    enhancedPrompt += '. Neutral background. Use brand colors.';
 
     try {
       // Using Pollinations.ai - free AI image generation
