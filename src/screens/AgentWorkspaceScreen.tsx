@@ -343,19 +343,41 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
     // Detect labeled content types in assistant messages and render with wrappers
     const detectKind = (text: string) => {
       const lower = text.toLowerCase();
-      if (lower.startsWith('caption:')) return 'caption';
-      if (lower.startsWith('post:')) return 'post';
-      if (lower.startsWith('email:')) return 'email';
-      if (lower.startsWith('blog:')) return 'blog';
-      if (lower.startsWith('ad:')) return 'ad';
-      if (lower.startsWith('code:')) return 'code';
+      if (lower.includes('<<caption_start>>')) return 'caption';
+      if (lower.includes('<<post_start>>')) return 'post';
+      if (lower.includes('<<email_start>>')) return 'email';
+      if (lower.includes('<<blog_start>>')) return 'blog';
+      if (lower.includes('<<ad_start>>')) return 'ad';
+      if (lower.includes('<<code_start>>')) return 'code';
       return 'text';
     };
 
     const stripLabel = (text: string) => text.replace(/^\s*([A-Za-z]+)\s*:\s*/i, '').trim();
+    const extractBetweenMarkers = (text: string, start: string, end: string) => {
+      const s = text.indexOf(start);
+      const e = text.indexOf(end);
+      if (s !== -1 && e !== -1 && e > s) {
+        return text.substring(s + start.length, e).trim();
+      }
+      return stripLabel(text);
+    };
 
     const kind = !item.isUser ? detectKind(item.text) : 'text';
-    const contentText = !item.isUser ? stripLabel(item.text) : item.text;
+    let contentText = !item.isUser ? stripLabel(item.text) : item.text;
+    if (!item.isUser) {
+      const markerMap: Record<string, { start: string; end: string }> = {
+        caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
+        post: { start: '<<POST_START>>', end: '<<POST_END>>' },
+        email: { start: '<<EMAIL_START>>', end: '<<EMAIL_END>>' },
+        blog: { start: '<<BLOG_START>>', end: '<<BLOG_END>>' },
+        ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
+        code: { start: '<<CODE_START>>', end: '<<CODE_END>>' },
+      };
+      if (markerMap[kind]) {
+        const { start, end } = markerMap[kind];
+        contentText = extractBetweenMarkers(item.text, start, end);
+      }
+    }
 
     // If it's an image type message, render it as an image
     if (item.type === 'image' && item.imageUrl) {

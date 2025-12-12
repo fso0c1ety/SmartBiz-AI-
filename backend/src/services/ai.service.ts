@@ -224,12 +224,22 @@ export class AIService {
       return text.trim();
     };
 
+    const markers: Record<string, { start: string; end: string }> = {
+      caption: { start: '<<CAPTION_START>>', end: '<<CAPTION_END>>' },
+      post: { start: '<<POST_START>>', end: '<<POST_END>>' },
+      email: { start: '<<EMAIL_START>>', end: '<<EMAIL_END>>' },
+      blog: { start: '<<BLOG_START>>', end: '<<BLOG_END>>' },
+      ad: { start: '<<AD_START>>', end: '<<AD_END>>' },
+      code: { start: '<<CODE_START>>', end: '<<CODE_END>>' },
+    };
+
     if (matched) {
       const label = typeLabelMap[matched.type] || 'Content';
       cleanedForContent = stripLeadingLabel(assistantMessage, label);
       cleanedForContent = stripMetaCommentary(cleanedForContent);
       if (matched.type === 'code') cleanedForContent = extractCode(assistantMessage);
-      labeledForChat = `${label}: ${cleanedForContent}`;
+      const { start, end } = markers[matched.type];
+      labeledForChat = `${label}:\n${start}\n${cleanedForContent}\n${end}`;
     }
 
     // Store assistant response (with label if detected)
