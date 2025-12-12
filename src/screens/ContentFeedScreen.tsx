@@ -263,7 +263,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
 
         {/* Media */}
         {item.media && item.media.length > 0 && (
-          item.type === 'image' || item.media.length > 1 ? (
+          item.media.length > 1 ? (
             <View style={styles.mediaGrid}>
               {item.media.map((m, idx) => {
                 return (
