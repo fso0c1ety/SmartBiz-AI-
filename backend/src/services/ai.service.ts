@@ -264,6 +264,7 @@ export class AIService {
       try {
         let subject: string | undefined;
         let body: string | undefined;
+        let sanitizedContent = assistantMessage;
 
         if (matched.type === 'email') {
           // Try to extract Subject and Body blocks
@@ -282,8 +283,26 @@ export class AIService {
           }
 
           // Enforce sanitized email rendering: rebuild content block
-          const sanitized = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
-          assistantMessage = sanitized;
+          sanitizedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
+        }
+
+        if (matched.type === 'code') {
+          // Strip Markdown code fences and keep code only
+          const fenceMatch = assistantMessage.match(/```([\s\S]*?)```/m);
+          if (fenceMatch?.[1]) {
+            // Remove optional language identifier on first line
+            const raw = fenceMatch[1];
+            const lines = raw.split(/\r?\n/);
+            const maybeLang = lines[0].trim();
+            // If the first line looks like a language tag, drop it
+            const code = /^(tsx?|jsx?|json|html|css|python|java|c\+\+|c|go|rust|sql|bash|sh)$/i.test(maybeLang)
+              ? lines.slice(1).join('\n')
+              : raw;
+            sanitizedContent = code.trim();
+          } else {
+            // Remove any stray backticks
+            sanitizedContent = assistantMessage.replace(/```/g, '').trim();
+          }
         }
 
         await prisma.content.create({
@@ -292,7 +311,7 @@ export class AIService {
             type: matched.type,
             data: JSON.stringify({
               prompt: 'Detected from chat reply',
-              content: assistantMessage,
+              content: sanitizedContent,
               ...(subject ? { subject } : {}),
               ...(body ? { body } : {}),
               status: 'draft',
