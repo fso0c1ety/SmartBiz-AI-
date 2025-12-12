@@ -340,6 +340,27 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
   };
 
   const renderMessage = ({ item }: { item: Message }) => {
+    // Detect labeled content types in assistant messages and render with wrappers
+    const detectKind = (text: string) => {
+      const lower = text.toLowerCase();
+      if (lower.startsWith('caption:')) return 'caption';
+      if (lower.startsWith('post:')) return 'post';
+      if (lower.startsWith('email:')) return 'email';
+      if (lower.startsWith('blog:')) return 'blog';
+      if (lower.startsWith('ad:')) return 'ad';
+      if (lower.startsWith('code:')) return 'code';
+      // Heuristics
+      if (/```/.test(text)) return 'code';
+      if (/subject:/i.test(text) || /\bdear\b/i.test(text)) return 'email';
+      if (/#\w+/.test(text)) return 'caption';
+      return 'text';
+    };
+
+    const stripLabel = (text: string) => text.replace(/^\s*([A-Za-z]+)\s*:\s*/i, '').trim();
+
+    const kind = !item.isUser ? detectKind(item.text) : 'text';
+    const contentText = !item.isUser ? stripLabel(item.text) : item.text;
+
     // If it's an image type message, render it as an image
     if (item.type === 'image' && item.imageUrl) {
       return (
@@ -411,6 +432,71 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         return <Text key={index}>{part}</Text>;
       });
     };
+
+    // Specialized rendering
+    if (!item.isUser) {
+      // Code block
+      if (kind === 'code') {
+        const codeMatch = contentText.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
+        const code = (codeMatch ? codeMatch[1] : contentText).trim();
+        return (
+          <View style={[styles.messageRow, styles.aiMessageRow]}>
+            <Image source={getAgentLogoSource()} style={styles.aiAvatarSmall} />
+            <View style={[styles.messageContent]}>
+              <View style={[styles.messageBubble, { backgroundColor: colors.surface }]}> 
+                <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>Code</Text>
+                <View style={[styles.codeContainer, { backgroundColor: colorScheme === 'dark' ? '#0B0F19' : '#F5F7FA', borderColor: colors.border }]}> 
+                  <Text style={[styles.codeText, { color: colors.text }]}>{code}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      }
+
+      // Email
+      if (kind === 'email') {
+        // Try to split subject/body
+        const subjectMatch = contentText.match(/subject:\s*(.*)/i);
+        const body = contentText.replace(/subject:.*\n?/i, '').trim();
+        const subject = subjectMatch ? subjectMatch[1].trim() : 'Email';
+        return (
+          <View style={[styles.messageRow, styles.aiMessageRow]}>
+            <Image source={getAgentLogoSource()} style={styles.aiAvatarSmall} />
+            <View style={[styles.messageContent]}>
+              <View style={[styles.messageBubble, { backgroundColor: colors.surface }]}> 
+                <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>Email</Text>
+                <View style={[styles.emailCard, { borderColor: colors.border, backgroundColor: colorScheme === 'dark' ? '#0B0F19' : '#FFFFFF' }]}> 
+                  <Text style={[styles.emailSubject, { color: colors.text }]}>{subject}</Text>
+                  <Text style={[styles.emailBody, { color: colors.textSecondary }]}>{body}</Text>
+                </View>
+              </View>
+            </View>
+          </View>
+        );
+      }
+
+      // Caption / Post / Ad / Blog simple wrappers
+      const labelMap: Record<string, string> = {
+        caption: 'Caption',
+        post: 'Post',
+        ad: 'Ad',
+        blog: 'Blog',
+      };
+      if (kind !== 'text') {
+        return (
+          <View style={[styles.messageRow, styles.aiMessageRow]}>
+            <Image source={getAgentLogoSource()} style={styles.aiAvatarSmall} />
+            <View style={[styles.messageContent]}>
+              <View style={[styles.messageBubble, { backgroundColor: colors.surface }]}> 
+                <Text style={[styles.messageLabel, { color: colors.textSecondary }]}>{labelMap[kind] || 'Content'}</Text>
+                <Text style={[styles.messageText, { color: colors.text }]}>{contentText}</Text>
+              </View>
+            </View>
+          </View>
+        );
+      }
+    }
 
     // Regular text message rendering
     return (
@@ -713,6 +799,37 @@ const styles = StyleSheet.create({
   messageText: {
     fontSize: FontSize.base,
     lineHeight: 24,
+  },
+  messageLabel: {
+    fontSize: FontSize.xs,
+    fontWeight: FontWeight.semibold,
+    marginBottom: 6,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  codeContainer: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+  },
+  codeText: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+  },
+  emailCard: {
+    borderWidth: 1,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.md,
+    gap: Spacing.xs,
+  },
+  emailSubject: {
+    fontSize: FontSize.base,
+    fontWeight: FontWeight.semibold,
+  },
+  emailBody: {
+    fontSize: FontSize.sm,
+    lineHeight: 20,
   },
   linkText: {
     textDecorationLine: 'underline',

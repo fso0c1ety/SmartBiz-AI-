@@ -161,17 +161,8 @@ export class AIService {
           data: {
             agentId,
             role: 'assistant',
-            message: assistantMessage,
-          },
-        });
-
-        return {
-          message: assistantMessage,
-          type: 'image',
-          imageUrl: imageResult.imageUrl,
-          imagePrompt: imagePrompt,
-          usage: null,
-        };
+            // Detect content types in assistant reply and persist to content feed
+            const lower = assistantMessage.toLowerCase();
       } catch (error: any) {
         // If image generation fails, fall back to text response
         console.error('❌ Image generation failed:', error.message);
@@ -182,15 +173,35 @@ export class AIService {
     await prisma.message.create({
       data: {
         agentId,
-        role: 'user',
+            // If a caption is detected, label the chat reply as "Caption:" but persist only the caption text in content
+            let assistantMessageForChat = assistantMessage;
+            if (matched?.type === 'caption') {
+              assistantMessageForChat = `Caption: ${assistantMessage.replace(/^\s*caption\s*:\s*/i, '')}`;
+            }
+
+            // Store assistant response (with caption label when applicable)
+            await prisma.message.create({
+              data: {
+                agentId,
+                role: 'assistant',
+                message: assistantMessageForChat,
+              },
+            });
+
+            if (matched) {
         message,
+                // Prepare clean content text (remove any leading caption label)
+                const cleanContent = matched.type === 'caption'
+                  ? assistantMessage.replace(/^\s*caption\s*:\s*/i, '')
+                  : assistantMessage;
+
       },
     });
 
     // Build AI context with memory
     const { systemPrompt, recentMessages } = await AIMemoryService.buildAIContext(
       agentId,
-      message
+                      content: cleanContent,
     );
 
     // Prepare conversation history
@@ -202,7 +213,7 @@ export class AIService {
     // Call provider; fallback locally if quota exceeded
     let assistantMessage = '';
     let usage: any = null;
-    try {
+              message: assistantMessageForChat,
       const completion = await createChatCompletion({
         messages: [
           { role: 'system', content: systemPrompt },
@@ -238,14 +249,6 @@ export class AIService {
       throw err;
     }
 
-    // Store assistant response
-    await prisma.message.create({
-      data: {
-        agentId,
-        role: 'assistant',
-        message: assistantMessage,
-      },
-    });
     // Detect content types in assistant reply and persist to content feed
     const lower = assistantMessage.toLowerCase();
     const detectors: Array<{ type: string; test: (t: string) => boolean }> = [
@@ -258,6 +261,45 @@ export class AIService {
     ];
 
     const matched = detectors.find((d) => d.test(lower));
+    let labeledForChat = assistantMessage;
+    let cleanedForContent = assistantMessage;
+
+    const typeLabelMap: Record<string, string> = {
+      caption: 'Caption',
+      post: 'Post',
+      email: 'Email',
+      blog: 'Blog',
+      ad: 'Ad',
+      code: 'Code',
+    };
+
+    const stripLeadingLabel = (text: string, label: string) =>
+      text.replace(new RegExp(`^\\s*${label}\\s*:\\s*`, 'i'), '').trim();
+
+    const extractCode = (text: string) => {
+      const fenceMatch = text.match(/```[a-zA-Z0-9]*\n([\s\S]*?)```/);
+      if (fenceMatch) return fenceMatch[1].trim();
+      return text.trim();
+    };
+
+    if (matched) {
+      const label = typeLabelMap[matched.type] || 'Content';
+      cleanedForContent = stripLeadingLabel(assistantMessage, label);
+      if (matched.type === 'code') {
+        cleanedForContent = extractCode(assistantMessage);
+      }
+      labeledForChat = `${label}: ${cleanedForContent}`;
+    }
+
+    // Store assistant response (with label if detected)
+    await prisma.message.create({
+      data: {
+        agentId,
+        role: 'assistant',
+        message: labeledForChat,
+      },
+    });
+
     if (matched) {
       try {
         await prisma.content.create({
@@ -266,7 +308,7 @@ export class AIService {
             type: matched.type,
             data: JSON.stringify({
               prompt: 'Detected from chat reply',
-              content: assistantMessage,
+              content: cleanedForContent,
               status: 'draft',
               generatedAt: new Date().toISOString(),
             }),
@@ -278,7 +320,7 @@ export class AIService {
     }
 
     return {
-      message: assistantMessage,
+      message: labeledForChat,
       usage,
       detectedType: matched?.type || null,
     };
