@@ -728,7 +728,18 @@ export class AIService {
       const encodedPrompt = encodeURIComponent(enhancedPrompt);
       const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size.split('x')[0]}&height=${size.split('x')[1]}&nologo=true`;
 
-      // Store generated image reference
+      // Fetch image bytes and convert to base64 for inline rendering
+      let base64Image: string | null = null;
+      try {
+        const imgResp = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+        const mime = imgResp.headers['content-type'] || 'image/png';
+        const b64 = Buffer.from(imgResp.data, 'binary').toString('base64');
+        base64Image = `data:${mime};base64,${b64}`;
+      } catch (e: any) {
+        console.warn('⚠️ Failed to inline image; falling back to URL:', e.message);
+      }
+
+      // Store generated image, prefer base64 inline when available
       const content = await prisma.content.create({
         data: {
           agentId,
@@ -736,6 +747,7 @@ export class AIService {
           data: JSON.stringify({
             prompt: enhancedPrompt,
             imageUrl,
+            media: base64Image ? [base64Image] : [imageUrl],
             size,
             businessName: agent.business.name,
             generatedAt: new Date().toISOString(),
@@ -747,6 +759,7 @@ export class AIService {
       return {
         content,
         imageUrl,
+        imageDataUrl: base64Image || null,
         usage: null,
       };
     } catch (err: any) {
