@@ -619,7 +619,7 @@ export class AIService {
     try {
       const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
       if (ids.length > 0) {
-        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE messageId IN (${placeholders}::uuid) ORDER BY createdAt DESC`, ...ids);
+        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE messageId = ANY($1::uuid[]) ORDER BY createdAt DESC`, ids);
       }
     } catch (e: any) {
       console.warn('⚠️ Failed to query message media rows:', e?.message || e);
@@ -727,7 +727,7 @@ export class AIService {
       // Using raw query to avoid Prisma 7 migration hurdles
       const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
       if (ids.length > 0) {
-        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE contentId IN (${placeholders}::uuid) ORDER BY createdAt DESC`, ...ids);
+        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE contentId = ANY($1::uuid[]) ORDER BY createdAt DESC`, ids);
       }
     } catch (e: any) {
       console.warn('⚠️ Failed to query media rows:', e?.message || e);
@@ -793,7 +793,7 @@ export class AIService {
         const mime = isData ? (m.split(';')[0].replace('data:', '') || 'image/png') : null;
         const base64 = isData ? m.split(',')[1] : null;
         await prisma.$executeRawUnsafe(
-          `INSERT INTO media (agentId, messageId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+          `INSERT INTO media (agentId, messageId, url, base64, mimeType) VALUES ($1::uuid, $2::uuid, $3, $4, $5)`,
           message.agentId,
           messageId,
           isHttp ? m : null,
@@ -934,7 +934,7 @@ export class AIService {
           const mime = isData ? (first.split(';')[0].replace('data:', '') || 'image/png') : null;
           const base64 = isData ? first.split(',')[1] : null;
           await prisma.$executeRawUnsafe(
-            `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+            `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1::uuid, $2::uuid, $3, $4, $5)`,
             agentId,
             content.id,
             isHttp ? first : null,
@@ -995,7 +995,7 @@ export class AIService {
             const mime = isData ? (first.split(';')[0].replace('data:', '') || 'image/png') : null;
             const base64 = isData ? first.split(',')[1] : null;
             await prisma.$executeRawUnsafe(
-              `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+              `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1::uuid, $2::uuid, $3, $4, $5)`,
               agentId,
               content.id,
               null,
@@ -1044,7 +1044,7 @@ export class AIService {
         const mime = isData ? (first.split(';')[0].replace('data:', '') || 'image/png') : null;
         const base64 = isData ? first.split(',')[1] : null;
         await prisma.$executeRawUnsafe(
-          `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1, $2, $3, $4, $5)`,
+          `INSERT INTO media (agentId, contentId, url, base64, mimeType) VALUES ($1::uuid, $2::uuid, $3, $4, $5)`,
           agentId,
           content.id,
           isHttp ? first : null,
