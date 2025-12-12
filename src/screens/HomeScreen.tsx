@@ -217,12 +217,20 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {agents.length} {agents.length === 1 ? 'Employee' : 'Employees'}
           </Text>
         </View>
-        <TouchableOpacity
-          style={styles.settingsBtn}
-          onPress={() => navigation.navigate('Settings')}
-        >
-          <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
-        </TouchableOpacity>
+        <View style={styles.headerButtons}>
+          <TouchableOpacity
+            style={[styles.headerButton, { backgroundColor: colors.primary }]}
+            onPress={() => navigation.navigate('EnhancedCreateAgent')}
+          >
+            <Ionicons name="add" size={20} color="#fff" />
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.settingsBtn}
+            onPress={() => navigation.navigate('Settings')}
+          >
+            <Ionicons name="settings-outline" size={20} color={colors.textSecondary} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Employees list */}
@@ -243,7 +251,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       />
 
       {/* Floating Action Button */}
-      {agents.length > 0 && (
+      {/* {agents.length > 0 && (
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
           onPress={() => navigation.navigate('EnhancedCreateAgent')}
@@ -251,7 +259,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         >
           <Ionicons name="add" size={28} color="#fff" />
         </TouchableOpacity>
-      )}
+      )} */}
 
       {/* Delete Confirmation Modal */}
       <Modal
@@ -310,6 +318,17 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.sm,
     paddingBottom: Spacing.lg,
+  },
+  headerButtons: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+  },
+  headerButton: {
+    width: 40,
+    height: 40,
+    borderRadius: BorderRadius.md,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   title: {
     fontSize: FontSize.xl,
@@ -391,21 +410,6 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: FontSize.xs,
     fontWeight: FontWeight.medium,
-  },
-  fab: {
-    position: 'absolute',
-    bottom: Spacing.xl,
-    right: Spacing.lg,
-    width: 52,
-    height: 52,
-    borderRadius: BorderRadius.full,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.15,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 4,
   },
   emptyContainer: {
     flex: 1,
