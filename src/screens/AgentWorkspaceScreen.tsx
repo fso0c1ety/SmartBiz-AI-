@@ -366,12 +366,15 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
       const pattern = new RegExp(`${start.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}([\s\S]*?)${end.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`, 'i');
       const match = text.match(pattern);
       if (match && match[1]) {
-        // Remove any residual marker lines and trim
-        return match[1]
-          .split(/\r?\n/)
-          .filter((ln) => !ln.includes(start) && !ln.includes(end))
-          .join('\n')
-          .trim();
+        return match[1].trim();
+      }
+      // Index-based fallback (case-insensitive)
+      const lower = text.toLowerCase();
+      const sIdx = lower.indexOf(start.toLowerCase());
+      const eIdx = lower.indexOf(end.toLowerCase());
+      if (sIdx !== -1 && eIdx !== -1 && eIdx > sIdx) {
+        const inner = text.substring(sIdx + start.length, eIdx);
+        return inner.trim();
       }
       // Fallback: remove label prefix if markers missing
       return stripLabel(text);

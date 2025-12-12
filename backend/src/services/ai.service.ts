@@ -158,6 +158,18 @@ export class AIService {
     // Build AI context with memory
     const { systemPrompt, recentMessages } = await AIMemoryService.buildAIContext(agentId, message);
 
+    // Infer desired output type from the user's prompt to enforce strict-only output
+    const userType = (() => {
+      const m = message.toLowerCase();
+      if (/\b(email|mail|compose)\b/.test(m)) return 'email';
+      if (/\b(code|function|snippet|script)\b/.test(m)) return 'code';
+      if (/\b(caption|instagram|ig caption)\b/.test(m)) return 'caption';
+      if (/\b(post|tweet|social post)\b/.test(m)) return 'post';
+      if (/\b(blog|article|intro)\b/.test(m)) return 'blog';
+      if (/\b(ad|advert|advertisement|copy)\b/.test(m)) return 'ad';
+      return null;
+    })();
+
     const conversationHistory = recentMessages.map((msg) => ({
       role: msg.role as 'user' | 'assistant' | 'system',
       content: msg.message,
@@ -169,7 +181,7 @@ export class AIService {
     try {
       const completion = await createChatCompletion({
         messages: [
-          { role: 'system', content: systemPrompt },
+          { role: 'system', content: `${systemPrompt}${userType ? `\n\nSTRICT OUTPUT RULES: You must output ONLY the ${userType} content. Do NOT add any explanations, prefacing text, meta commentary, or extras. For email: include 'Subject:' line then the body. For code: return ONLY code (optionally fenced). For caption/post/ad/blog: return ONLY the formatted text. No pre/post remarks.` : ''}` },
           ...conversationHistory,
           { role: 'user', content: message },
         ],
@@ -312,7 +324,7 @@ export class AIService {
       email: `Write a professional email about: ${prompt}\n\nKeep it concise and actionable.`,
     };
 
-    const contentPrompt = contentPrompts[type] || prompt;
+    const contentPrompt = `${contentPrompts[type] || prompt}\n\nSTRICT OUTPUT RULES: Output ONLY the ${type} content. No explanations or meta text. For email: include 'Subject:' then body. For code: only the code (optionally fenced). For caption/post/ad/blog: only the formatted text.`;
 
     // Generate content
     let generatedContent = '';
