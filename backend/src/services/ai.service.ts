@@ -246,10 +246,41 @@ export class AIService {
         message: assistantMessage,
       },
     });
+    // Detect content types in assistant reply and persist to content feed
+    const lower = assistantMessage.toLowerCase();
+    const detectors: Array<{ type: string; test: (t: string) => boolean }> = [
+      { type: 'caption', test: (t) => /\bcaption\b/.test(t) || /#\w+/.test(t) },
+      { type: 'post', test: (t) => /\b(post|tweet|social\s+post)\b/.test(t) },
+      { type: 'email', test: (t) => /subject:\s|\bdear\b|\bbest regards\b/.test(t) },
+      { type: 'blog', test: (t) => /\b(blog|introduction|outline)\b/.test(t) },
+      { type: 'ad', test: (t) => /\b(ad|advertisement|cta|call to action)\b/.test(t) },
+      { type: 'code', test: (t) => /```|\bfunction\b|\bconst\b|\bclass\b/.test(t) },
+    ];
+
+    const matched = detectors.find((d) => d.test(lower));
+    if (matched) {
+      try {
+        await prisma.content.create({
+          data: {
+            agentId,
+            type: matched.type,
+            data: JSON.stringify({
+              prompt: 'Detected from chat reply',
+              content: assistantMessage,
+              status: 'draft',
+              generatedAt: new Date().toISOString(),
+            }),
+          },
+        });
+      } catch (e: any) {
+        console.error('Failed to persist detected content from chat:', e.message);
+      }
+    }
 
     return {
       message: assistantMessage,
       usage,
+      detectedType: matched?.type || null,
     };
   }
 

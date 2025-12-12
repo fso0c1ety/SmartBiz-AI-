@@ -10,6 +10,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { RootStackParamList } from '../navigation/types';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Card } from '../components/Card';
 import { Colors } from '../constants/colors';
@@ -19,14 +21,14 @@ import { useToastStore } from '../store/useToastStore';
 import { getGeneratedContent, postToSocialMedia } from '../services/agentService';
 
 type ContentFeedScreenProps = {
-  navigation: NativeStackNavigationProp<any>;
+  navigation: StackNavigationProp<RootStackParamList, 'ContentFeed'>;
 };
 
 interface GeneratedContent {
   id: string;
   agentId: string;
   agentName: string;
-  type: 'post' | 'caption' | 'email' | 'blog' | 'ad';
+  type: 'post' | 'caption' | 'email' | 'blog' | 'ad' | 'code' | 'image';
   platform?: 'instagram' | 'tiktok' | 'twitter' | 'facebook' | 'linkedin';
   content: string;
   media?: string[];
@@ -44,7 +46,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
   const colors = Colors[colorScheme];
   const { showToast } = useToastStore();
 
-  const [filter, setFilter] = useState<'all' | 'post' | 'caption' | 'email' | 'blog' | 'ad'>('all');
+  const [filter, setFilter] = useState<'all' | 'post' | 'caption' | 'email' | 'blog' | 'ad' | 'code' | 'image'>('all');
   const [contents, setContents] = useState<GeneratedContent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -297,6 +299,8 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
           { id: 'email', label: 'Emails', icon: 'mail' },
           { id: 'blog', label: 'Blogs', icon: 'document-text' },
           { id: 'ad', label: 'Ads', icon: 'megaphone' },
+          { id: 'code', label: 'Code', icon: 'code-slash' },
+          { id: 'image', label: 'Images', icon: 'image' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.id}
