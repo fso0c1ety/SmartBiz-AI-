@@ -34,7 +34,7 @@ app.get('/health', (req, res) => {
 // Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/business', businessRoutes);
-app.use('/api/agent', agentRoutes);
+app.use('/api/agents', agentRoutes);
 app.use('/api/agent', chatRoutes);
 app.use('/api/agent', contentRoutes);
 
