@@ -749,7 +749,7 @@ export class AIService {
         agentName: content.agent.agentName,
         type: content.type,
         platform: data.platform,
-        content: data.content || data.text || data.caption || '',
+        content: content.type === 'image' ? (data.prompt || '') : (data.content || data.text || data.caption || ''),
         imageUrl: data.imageUrl,
         subject: data.subject,
         body: data.body,

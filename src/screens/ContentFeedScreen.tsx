@@ -37,7 +37,7 @@ interface GeneratedContent {
   content: string;
   subject?: string;
   body?: string;
-  media?: Array<string | { base64?: string; url?: string }>;
+  media?: string[];
   status: 'draft' | 'published' | 'scheduled';
   createdAt: string;
   engagement?: {
@@ -262,10 +262,8 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
           item.type === 'image' || item.media.length > 1 ? (
             <View style={styles.mediaGrid}>
               {item.media.map((m, idx) => {
-                const uri = typeof m === 'string' ? m : (m.base64 || m.url);
-                if (!uri) return null;
                 return (
-                  <Image key={idx} source={{ uri }} style={styles.mediaGridImage} />
+                  <Image key={idx} source={{ uri: m }} style={styles.mediaGridImage} />
                 );
               })}
             </View>
@@ -276,10 +274,8 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
               style={styles.mediaScroll}
             >
               {item.media.map((m, idx) => {
-                const uri = typeof m === 'string' ? m : (m.base64 || m.url);
-                if (!uri) return null;
                 return (
-                  <Image key={idx} source={{ uri }} style={styles.mediaImageLarge} />
+                  <Image key={idx} source={{ uri: m }} style={styles.mediaImageLarge} />
                 );
               })}
             </ScrollView>
@@ -331,6 +327,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
               <TouchableOpacity
                 style={[styles.actionButton, { borderColor: colors.border }]}
                 onPress={async () => {
+                  if (!item.media || item.media.length === 0) return;
                   try {
                     const { status } = await MediaLibrary.requestPermissionsAsync();
                     if (status !== 'granted') {
@@ -338,8 +335,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
                       return;
                     }
                     // Save first image in the set
-                    const m = item.media[0];
-                    const uri = typeof m === 'string' ? m : (m.base64 || m.url);
+                    const uri = item.media[0];
                     if (!uri) {
                       showToast('No image to save', 'error');
                       return;
@@ -348,10 +344,16 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
                     if (uri.startsWith('data:image')) {
                       // Write base64 to a temp file
                       const ext = uri.includes('image/png') ? 'png' : 'jpg';
-                      const path = FileSystem.cacheDirectory + `smartbiz_${Date.now()}.${ext}`;
+                      const path = FileSystem.documentDirectory + `smartbiz_${Date.now()}.${ext}`;
                       const base64Data = uri.split(',')[1];
                       await FileSystem.writeAsStringAsync(path, base64Data, { encoding: FileSystem.EncodingType.Base64 });
                       fileUri = path;
+                    } else if (uri.startsWith('http')) {
+                      // Download to temp file
+                      const ext = 'jpg'; // assume
+                      const path = FileSystem.documentDirectory + `smartbiz_${Date.now()}.${ext}`;
+                      const download = await FileSystem.downloadAsync(uri, path);
+                      fileUri = download.uri;
                     }
                     const asset = await MediaLibrary.createAssetAsync(fileUri);
                     await MediaLibrary.createAlbumAsync('SmartBiz AI', asset, false);
