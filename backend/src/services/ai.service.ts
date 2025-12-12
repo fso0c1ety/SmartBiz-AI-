@@ -746,7 +746,7 @@ export class AIService {
 
   /**
    * Generate AI image using external API
-   * Using Pollinations.ai (free, no API key needed) or DeepSeek
+   * Provider-selectable via env: IMAGE_PROVIDER=pollinations|replicate|stability
    */
   static async generateImage(input: ImageGenerationInput) {
     const { agentId, prompt, userId, size = '1024x1024' } = input;
@@ -776,12 +776,129 @@ export class AIService {
     // Encourage neutral background and brand colors to reduce provider defaults
     enhancedPrompt += '. Neutral background. Use brand colors.';
 
-    try {
-      // Using Pollinations.ai - free AI image generation
-      const encodedPrompt = encodeURIComponent(enhancedPrompt);
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${size.split('x')[0]}&height=${size.split('x')[1]}&nologo=true`;
+    const provider = (process.env.IMAGE_PROVIDER || 'pollinations').toLowerCase();
+    const [w, h] = size.split('x').map((v) => parseInt(v, 10));
 
-      // Fetch image bytes and convert to base64 for inline rendering
+    try {
+      if (provider === 'replicate') {
+        if (!process.env.REPLICATE_API_TOKEN) {
+          throw new Error('REPLICATE_API_TOKEN not set. Set IMAGE_PROVIDER=pollinations or add the token.');
+        }
+        // Replicate SDXL or Flux Schnell
+        const model = process.env.REPLICATE_MODEL || 'stability-ai/sdxl';
+        const apiUrl = `https://api.replicate.com/v1/predictions`;
+        const body: any = {
+          version: process.env.REPLICATE_VERSION || undefined,
+          // For hosted models, pass input
+          input: {
+            prompt: enhancedPrompt,
+            width: w,
+            height: h,
+          },
+          model,
+        };
+        // Remove undefineds
+        Object.keys(body).forEach((k) => body[k] === undefined && delete body[k]);
+        const resp = await axios.post(apiUrl, body, {
+          headers: {
+            Authorization: `Token ${process.env.REPLICATE_API_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
+          timeout: 120000,
+        });
+        // Poll until completed if necessary
+        let prediction = resp.data;
+        const getUrl = prediction?.urls?.get;
+        const status = prediction?.status;
+        let output: any = prediction?.output;
+        if (status !== 'succeeded' && getUrl) {
+          const started = Date.now();
+          while (Date.now() - started < 180000) { // up to 3 minutes
+            await new Promise((r) => setTimeout(r, 2000));
+            const p = await axios.get(getUrl, {
+              headers: { Authorization: `Token ${process.env.REPLICATE_API_TOKEN}` },
+            });
+            prediction = p.data;
+            if (prediction.status === 'succeeded') { output = prediction.output; break; }
+            if (prediction.status === 'failed' || prediction.status === 'canceled') {
+              throw new Error(`Replicate ${prediction.status}`);
+            }
+          }
+        }
+        const imageUrl = Array.isArray(output) ? output[0] : output; // usually an array of URLs
+        // Inline
+        let base64Image: string | null = null;
+        try {
+          const imgResp = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+          const mime = imgResp.headers['content-type'] || 'image/png';
+          const b64 = Buffer.from(imgResp.data, 'binary').toString('base64');
+          base64Image = `data:${mime};base64,${b64}`;
+        } catch {}
+        const content = await prisma.content.create({
+          data: {
+            agentId,
+            type: 'image',
+            data: JSON.stringify({
+              prompt: enhancedPrompt,
+              imageUrl,
+              media: base64Image ? [base64Image] : [imageUrl],
+              size,
+              businessName: agent.business.name,
+              generatedAt: new Date().toISOString(),
+              provider: 'Replicate',
+              model,
+            }),
+          },
+        });
+        return { content, imageUrl, imageDataUrl: base64Image || null, usage: null };
+      }
+
+      if (provider === 'stability') {
+        if (!process.env.STABILITY_API_KEY) {
+          throw new Error('STABILITY_API_KEY not set. Set IMAGE_PROVIDER=pollinations or add the key.');
+        }
+        // Stability API (Stable Diffusion XL)
+        const apiUrl = `https://api.stability.ai/v1/generation/sdxl-1.0/text-to-image`;
+        const body = {
+          text_prompts: [{ text: enhancedPrompt }],
+          width: w,
+          height: h,
+          cfg_scale: 7,
+          samples: 1,
+        };
+        const resp = await axios.post(apiUrl, body, {
+          headers: {
+            Authorization: `Bearer ${process.env.STABILITY_API_KEY}`,
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          timeout: 120000,
+        });
+        const artifact = resp.data?.artifacts?.[0];
+        const base64Image: string | null = artifact?.base64 ? `data:image/png;base64,${artifact.base64}` : null;
+        const imageUrl = null; // Stability returns base64 by default here
+        const content = await prisma.content.create({
+          data: {
+            agentId,
+            type: 'image',
+            data: JSON.stringify({
+              prompt: enhancedPrompt,
+              imageUrl,
+              media: base64Image ? [base64Image] : [],
+              size,
+              businessName: agent.business.name,
+              generatedAt: new Date().toISOString(),
+              provider: 'Stability',
+              model: 'sdxl-1.0',
+            }),
+          },
+        });
+        return { content, imageUrl, imageDataUrl: base64Image || null, usage: null };
+      }
+
+      // Default: Pollinations (free, no key)
+      const encodedPrompt = encodeURIComponent(enhancedPrompt);
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodedPrompt}?width=${w}&height=${h}&nologo=true`;
       let base64Image: string | null = null;
       try {
         const imgResp = await axios.get(imageUrl, { responseType: 'arraybuffer' });
@@ -791,8 +908,6 @@ export class AIService {
       } catch (e: any) {
         console.warn('⚠️ Failed to inline image; falling back to URL:', e.message);
       }
-
-      // Store generated image, prefer base64 inline when available
       const content = await prisma.content.create({
         data: {
           agentId,
@@ -808,13 +923,7 @@ export class AIService {
           }),
         },
       });
-
-      return {
-        content,
-        imageUrl,
-        imageDataUrl: base64Image || null,
-        usage: null,
-      };
+      return { content, imageUrl, imageDataUrl: base64Image || null, usage: null };
     } catch (err: any) {
       console.error('❌ Image generation error:', err.message);
       throw new Error('Failed to generate image: ' + err.message);

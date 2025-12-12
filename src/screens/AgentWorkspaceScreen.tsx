@@ -238,16 +238,24 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         imageUrl,
         type: response.type || (imageUrl ? 'image' : 'text'),
       };
-      // Push message media to backend for persistence
+      // Push message media to backend for persistence and report failures
       try {
         if (response.media && response.media.length > 0 && (response.messageId || response.id)) {
           await updateMessageMedia({ messageId: String(response.messageId || response.id), media: response.media });
         }
-      } catch {}
+      } catch (e: any) {
+        console.warn('⚠️ Failed to persist chat media:', e?.message || e);
+        showToast('Saved locally; backend media persistence failed.', 'warning');
+      }
 
       // Add AI message and start typing animation
       setMessages((prev) => [...prev, aiMessage]);
-      try { if (selectedAgent?.id) await saveChatCache(selectedAgent.id, [...messages, aiMessage]); } catch {}
+      try {
+        if (selectedAgent?.id) {
+          const next = [...messages, aiMessage];
+          await saveChatCache(selectedAgent.id, next);
+        }
+      } catch {}
       setTypingMessage(aiMessage);
       
       let displayIndex = 0;
