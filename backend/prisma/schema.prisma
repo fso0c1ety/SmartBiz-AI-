@@ -84,6 +84,7 @@ model Message {
   createdAt DateTime @default(now())
 
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  media Media[]
 
   @@index([agentId, createdAt])
   @@map("messages")
@@ -97,7 +98,28 @@ model Content {
   createdAt DateTime @default(now())
 
   agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  media Media[]
 
   @@index([agentId, createdAt])
   @@map("contents")
+}
+
+model Media {
+  id         String   @id @default(uuid())
+  agentId    String
+  messageId  String?
+  contentId  String?
+  url        String?
+  base64     String?  // data URI or raw base64
+  mimeType   String?  // e.g., image/png
+  createdAt  DateTime @default(now())
+
+  agent   Agent   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  content Content? @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([messageId])
+  @@index([contentId])
+  @@map("media")
 }

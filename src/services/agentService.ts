@@ -273,9 +273,9 @@ export const updateContentMedia = async (params: {
     );
     return response.data;
   } catch (error: any) {
-    throw new Error(
-      error.response?.data?.error || error.response?.data?.message || 'Failed to update content media'
-    );
+    const status = error?.response?.status;
+    const msg = error?.response?.data?.error || error?.response?.data?.message || 'Failed to update content media';
+    throw new Error(`${msg}${status ? ` (HTTP ${status})` : ''}`);
   }
 };
 
@@ -295,9 +295,9 @@ export const updateMessageMedia = async (params: {
     );
     return response.data;
   } catch (error: any) {
-    throw new Error(
-      error.response?.data?.error || error.response?.data?.message || 'Failed to update message media'
-    );
+    const status = error?.response?.status;
+    const msg = error?.response?.data?.error || error?.response?.data?.message || 'Failed to update message media';
+    throw new Error(`${msg}${status ? ` (HTTP ${status})` : ''}`);
   }
 };
 

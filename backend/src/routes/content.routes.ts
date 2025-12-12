@@ -28,6 +28,9 @@ router.post('/:id/content/create', validate(generateValidation), ContentControll
 router.post('/:id/image/generate', validate(imageValidation), ContentController.generateImage);
 router.get('/:id/content/all', ContentController.getAll);
 router.get('/', ContentController.getAllContent); // Get all content with filters
-router.put('/content/:contentId/media', ContentController.updateContentMedia);
+// Persist media for a specific content item
+// When mounted at /api/content -> final path: /api/content/:contentId/media
+// When mounted at /api/agent    -> final path: /api/agent/:contentId/media (not used by frontend)
+router.put('/:contentId/media', ContentController.updateContentMedia);
 
 export default router;
