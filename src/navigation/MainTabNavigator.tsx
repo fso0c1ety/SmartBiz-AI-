@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, Platform } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,20 +25,46 @@ export const MainTabNavigator = () => {
       screenOptions={{
         headerShown: false,
         tabBarStyle: {
-          backgroundColor: colorScheme === 'dark' ? '#1A1A1A' : '#2A2A2A',
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          height: Platform.OS === 'ios' ? 90 : 75,
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: Platform.OS === 'ios' ? 92 : 76,
           paddingBottom: Platform.OS === 'ios' ? 20 : 10,
-          paddingTop: 12,
+          paddingTop: 10,
+          borderRadius: 0,
+          overflow: 'hidden',
+          backgroundColor: 'transparent',
         },
+        tabBarBackground: () => (
+          Platform.OS === 'ios' ? (
+            <BlurView intensity={40} tint={colorScheme === 'dark' ? 'dark' : 'light'} style={{ flex: 1 }}>
+              <LinearGradient
+                colors={colorScheme === 'dark' ? ['rgba(15,23,42,0.6)', 'rgba(30,41,59,0.6)'] : ['rgba(14,165,233,0.35)', 'rgba(59,130,246,0.35)']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={{ flex: 1 }}
+              />
+            </BlurView>
+          ) : (
+            <LinearGradient
+              colors={colorScheme === 'dark' ? ['#0F172A', '#1E293B'] : ['#0EA5E9', '#3B82F6']}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={{ flex: 1 }}
+            />
+          )
+        ),
         tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarInactiveTintColor: colorScheme === 'dark' ? '#A7B0BF' : '#E5E7EB',
         tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '500',
-          marginTop: 8,
+          fontSize: 10,
+          fontWeight: '600',
+          marginTop: 4,
+          letterSpacing: 0.3,
         },
         tabBarIconStyle: {
           marginBottom: 0,
@@ -112,8 +139,12 @@ const styles = StyleSheet.create({
   },
   activeBackground: {
     position: 'absolute',
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    shadowColor: '#000',
+    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 8,
   },
 });

@@ -33,7 +33,7 @@ interface GeneratedContent {
   content: string;
   subject?: string;
   body?: string;
-  media?: string[];
+  media?: Array<string | { base64?: string; url?: string }>;
   status: 'draft' | 'published' | 'scheduled';
   createdAt: string;
   engagement?: {
@@ -209,19 +209,31 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
 
         {/* Media */}
         {item.media && item.media.length > 0 && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.mediaScroll}
-          >
-            {item.media.map((url, idx) => (
-              <Image
-                key={idx}
-                source={{ uri: url }}
-                style={styles.mediaImage}
-              />
-            ))}
-          </ScrollView>
+          item.type === 'image' || item.media.length > 1 ? (
+            <View style={styles.mediaGrid}>
+              {item.media.map((m, idx) => {
+                const uri = typeof m === 'string' ? m : (m.base64 || m.url);
+                if (!uri) return null;
+                return (
+                  <Image key={idx} source={{ uri }} style={styles.mediaGridImage} />
+                );
+              })}
+            </View>
+          ) : (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.mediaScroll}
+            >
+              {item.media.map((m, idx) => {
+                const uri = typeof m === 'string' ? m : (m.base64 || m.url);
+                if (!uri) return null;
+                return (
+                  <Image key={idx} source={{ uri }} style={styles.mediaImageLarge} />
+                );
+              })}
+            </ScrollView>
+          )
         )}
 
         {/* Engagement */}
@@ -489,6 +501,23 @@ const styles = StyleSheet.create({
     height: 200,
     borderRadius: BorderRadius.md,
     marginRight: Spacing.sm,
+  },
+  mediaImageLarge: {
+    width: 300,
+    height: 300,
+    borderRadius: BorderRadius.md,
+    marginRight: Spacing.sm,
+  },
+  mediaGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: Spacing.sm,
+    marginBottom: Spacing.md,
+  },
+  mediaGridImage: {
+    width: '48%',
+    aspectRatio: 1,
+    borderRadius: BorderRadius.md,
   },
   engagement: {
     flexDirection: 'row',
