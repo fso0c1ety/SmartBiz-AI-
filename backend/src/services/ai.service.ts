@@ -603,22 +603,24 @@ export class AIService {
     });
 
     // Attach media by looking up related image content created from this messageId
-    const withMedia = await Promise.all(messages.map(async (m) => {
+    const imageContents = await prisma.content.findMany({
+      where: { agentId, type: 'image' },
+      orderBy: { createdAt: 'desc' },
+      take: 200,
+    });
+    const withMedia = messages.map((m) => {
       try {
-        const linked = await prisma.content.findFirst({
-          where: { agentId, type: 'image' },
-          orderBy: { createdAt: 'desc' },
+        const match = imageContents.find((c) => {
+          const data = JSON.parse(c.data || '{}');
+          return String(data.fromMessageId || '') === String(m.id);
         });
-        if (!linked) return m as any;
-        const data = JSON.parse(linked.data || '{}');
-        const fromId = data.fromMessageId;
+        if (!match) return m as any;
+        const data = JSON.parse(match.data || '{}');
         const media = data.media || [];
-        if (fromId && String(fromId) === String(m.id) && media.length > 0) {
-          return { ...m, media } as any;
-        }
+        if (Array.isArray(media) && media.length > 0) return { ...m, media } as any;
       } catch {}
       return m as any;
-    }));
+    });
 
     return withMedia;
   }
