@@ -13,7 +13,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { LinearGradient } from 'expo-linear-gradient';
 import { useFocusEffect } from '@react-navigation/native';
 import { Colors } from '../constants/colors';
 import { BorderRadius, FontSize, FontWeight, Spacing } from '../constants/spacing';
@@ -220,17 +219,10 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
         </View>
         <View style={styles.headerButtons}>
           <TouchableOpacity
-            style={[styles.headerButton, { overflow: 'hidden' }]}
+            style={[styles.headerButton, { backgroundColor: colors.primary }]}
             onPress={() => navigation.navigate('EnhancedCreateAgent')}
           >
-            <LinearGradient
-              colors={[colors.gradient1, colors.gradient2]}
-              start={[0, 0]}
-              end={[1, 1]}
-              style={styles.headerButtonGradient}
-            >
-              <Ionicons name="add" size={20} color="#fff" />
-            </LinearGradient>
+            <Ionicons name="add" size={20} color="#fff" />
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.settingsBtn}
@@ -335,12 +327,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: BorderRadius.md,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerButtonGradient: {
-    width: '100%',
-    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
   },

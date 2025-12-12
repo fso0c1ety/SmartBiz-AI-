@@ -8,9 +8,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/new-icon.png",
+      "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#F6B1C0"
+      "backgroundColor": "#2D6AFF"
     },
     "ios": {
       "supportsTablet": true,
@@ -18,7 +18,7 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/new-icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2D6AFF"
       },
       "package": "com.smartbiz.aiemployees",
@@ -30,7 +30,7 @@
       ]
     },
     "web": {
-      "favicon": "./assets/.png"
+      "favicon": "./assets/favicon.png"
     },
     "plugins": [
       "expo-image-picker",
