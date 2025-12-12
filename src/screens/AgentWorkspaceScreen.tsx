@@ -24,6 +24,7 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { cacheMediaForContent, getCachedMediaForContent } from '../store/useMediaCache';
 import { loadChatCache, saveChatCache } from '../store/usePersistentCache';
+import { updateMessageMedia } from '../services/agentService';
 const simpleHash = (s: string) => {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;

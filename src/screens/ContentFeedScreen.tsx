@@ -84,7 +84,11 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
               const existing = await getCachedMediaForContent(c.id);
               const uris = existing || await cacheMediaForContent(c.id, c.media);
               // try to persist URIs on backend for stable reloads
-              try { await updateContentMedia({ contentId: c.id, media: uris }); } catch {}
+              try { await updateContentMedia({ contentId: c.id, media: uris }); }
+              catch (e: any) {
+                console.warn('⚠️ Failed to persist content media:', e?.message || e);
+                showToast('Saved locally; backend media persistence failed.', 'warning');
+              }
               return { ...c, media: uris } as GeneratedContent;
             }
           } catch {}
