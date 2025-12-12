@@ -267,7 +267,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             <View style={styles.mediaGrid}>
               {item.media.map((m, idx) => {
                 return (
-                  <Image key={idx} source={{ uri: m }} style={styles.mediaGridImage} onError={() => console.log('Image load error for:', m)} />
+                  <Image key={idx} source={{ uri: m }} style={styles.mediaGridImage} resizeMode="contain" onError={() => console.log('Image load error for:', m)} />
                 );
               })}
             </View>
@@ -279,7 +279,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
             >
               {item.media.map((m, idx) => {
                 return (
-                  <Image key={idx} source={{ uri: m }} style={styles.mediaImageLarge} onError={() => console.log('Image load error for:', m)} />
+                  <Image key={idx} source={{ uri: m }} style={styles.mediaImageLarge} resizeMode="contain" onError={() => console.log('Image load error for:', m)} />
                 );
               })}
             </ScrollView>
