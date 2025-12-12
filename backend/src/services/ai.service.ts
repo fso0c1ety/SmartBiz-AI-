@@ -130,20 +130,55 @@ export class AIService {
   private static minimalReplyInstruction(type: string): string {
     switch (type) {
       case 'email':
-        return 'Reply ONLY with:\nSubject: <subject>\n\nBody:\n<body>. Do not add comments, suggestions, or extra lines.';
+        return 'Reply ONLY with:\nSubject: <subject>\n\nBody:\n<body>. Use exactly these prefixes. Do not add comments, suggestions, extra lines, or anything else.';
       case 'code':
-        return 'Reply ONLY with raw code. No explanations, no markdown fences, no comments.';
+        return 'Reply ONLY with:\nCode:\n<raw code>. Use exactly this prefix. No explanations, no markdown fences, no comments.';
       case 'blog':
-        return 'Reply ONLY with the blog text. No commentary or meta instructions.';
+        return 'Reply ONLY with:\nBlog:\n<blog text>. Use exactly this prefix. No commentary or meta instructions.';
       case 'post':
-        return 'Reply ONLY with the social post text. No extra commentary.';
+        return 'Reply ONLY with:\nPost:\n<post text>. Use exactly this prefix. No extra commentary.';
       case 'caption':
-        return 'Reply ONLY with the caption. No extra commentary.';
+        return 'Reply ONLY with:\nCaption:\n<caption text>. Use exactly this prefix. No extra commentary.';
       case 'ad':
-        return 'Reply ONLY with the ad copy. No extra commentary.';
+        return 'Reply ONLY with:\nAd:\n<ad copy>. Use exactly this prefix. No extra commentary.';
       default:
         return 'Reply concisely with content only.';
     }
+  }
+
+  private static parseTaggedContent(text: string) {
+    const out: any = {};
+    const emailSubject = text.match(/\bSubject:\s*(.*)/i)?.[1]?.trim();
+    const emailBody = text.match(/\bBody:\s*([\s\S]*)/i)?.[1]?.trim();
+    if (emailSubject || emailBody) {
+      out.subject = emailSubject?.replace(/^\*\*\s*|\s*\*\*$/g, '').trim();
+      out.body = AIService.sanitizeEmailMarkers(emailBody || '');
+    }
+    const codeBlock = text.match(/\bCode:\s*([\s\S]*)/i)?.[1] || '';
+    if (codeBlock) {
+      // Reuse code sanitizer (remove fences, language headers)
+      const fenceRegex = /```[\w-]*\n([\s\S]*?)```/g;
+      const blocks: string[] = [];
+      let m: RegExpExecArray | null;
+      while ((m = fenceRegex.exec(codeBlock)) !== null) {
+        const raw = m[1];
+        const lines = raw.split(/\r?\n/);
+        const maybeLang = lines[0]?.trim();
+        const isLangHeader = /^(tsx?|jsx?|json|html|css|python|java|c\+\+|c|go|rust|sql|bash|sh)$/i.test(maybeLang);
+        const code = isLangHeader ? lines.slice(1).join('\n') : raw;
+        blocks.push(code.trim());
+      }
+      out.code = blocks.length > 0 ? blocks.join('\n\n') : codeBlock.replace(/```/g, '').trim();
+    }
+    const caption = text.match(/\bCaption:\s*([\s\S]*)/i)?.[1]?.trim();
+    if (caption) out.caption = caption;
+    const post = text.match(/\bPost:\s*([\s\S]*)/i)?.[1]?.trim();
+    if (post) out.post = post;
+    const ad = text.match(/\bAd:\s*([\s\S]*)/i)?.[1]?.trim();
+    if (ad) out.ad = ad;
+    const blog = text.match(/\bBlog:\s*([\s\S]*)/i)?.[1]?.trim();
+    if (blog) out.blog = blog;
+    return out;
   }
   /**
    * Chat with an AI agent
@@ -308,12 +343,13 @@ export class AIService {
         let subject: string | undefined;
         let body: string | undefined;
         let sanitizedContent = assistantMessage;
+        const tagged = AIService.parseTaggedContent(assistantMessage);
 
         if (matched.type === 'email') {
           // Try to extract Subject and Body blocks
           const subjectMatch = assistantMessage.match(/subject\s*:\s*(.*)/i);
           const bodyMatch = assistantMessage.match(/body\s*:\s*([\s\S]*)/i);
-          subject = subjectMatch?.[1]?.trim();
+          subject = (tagged.subject || subjectMatch?.[1]?.trim());
           // If no explicit Body:, split by first blank line
           if (bodyMatch?.[1]) {
             body = AIService.sanitizeEmailMarkers(bodyMatch[1].trim());
@@ -322,7 +358,7 @@ export class AIService {
             const firstLine = lines[0]?.trim();
             const rest = lines.slice(1).join('\n').trim();
             if (!subject && firstLine) subject = firstLine.replace(/^subject\s*:\s*/i, '').trim();
-            body = AIService.sanitizeEmailMarkers(rest || assistantMessage.trim());
+            body = AIService.sanitizeEmailMarkers(tagged.body || rest || assistantMessage.trim());
           }
           // Clean subject markdown emphasis like ** ... **
           if (subject) subject = subject.replace(/^\*\*\s*|\s*\*\*$/g, '').trim();
@@ -353,7 +389,9 @@ export class AIService {
             const code = isLangHeader ? lines.slice(1).join('\n') : raw;
             blocks.push(code.trim());
           }
-          if (blocks.length > 0) {
+          if (tagged.code) {
+            sanitizedContent = tagged.code;
+          } else if (blocks.length > 0) {
             sanitizedContent = blocks.join('\n\n');
           } else {
             sanitizedContent = assistantMessage.replace(/```/g, '').trim();
@@ -429,6 +467,7 @@ export class AIService {
     };
 
     const contentPrompt = contentPrompts[type] || prompt;
+    const minimalInstruction = AIService.minimalReplyInstruction(type);
 
     // Generate content
     let generatedContent = '';
@@ -438,7 +477,7 @@ export class AIService {
         messages: [
           {
             role: 'system',
-            content: `${systemPrompt}\n\nYou are creating ${type} content. Make it professional, on-brand, and effective.`,
+            content: `${systemPrompt}\n\nYou are creating ${type} content. Make it professional, on-brand, and effective.\n\n${minimalInstruction}`,
           },
           { role: 'user', content: contentPrompt },
         ],
@@ -478,10 +517,11 @@ export class AIService {
     // If email, sanitize to extract subject/body
     let subject: string | undefined;
     let body: string | undefined;
+    const tagged = AIService.parseTaggedContent(generatedContent);
     if (type === 'email') {
       const subjectMatch = generatedContent.match(/subject\s*:\s*(.*)/i);
       const bodyMatch = generatedContent.match(/body\s*:\s*([\s\S]*)/i);
-      subject = subjectMatch?.[1]?.trim();
+      subject = (tagged.subject || subjectMatch?.[1]?.trim());
       if (bodyMatch?.[1]) {
         body = AIService.sanitizeEmailMarkers(bodyMatch[1].trim());
       } else {
@@ -489,7 +529,7 @@ export class AIService {
         const firstLine = lines[0]?.trim();
         const rest = lines.slice(1).join('\n').trim();
         if (!subject && firstLine) subject = firstLine.replace(/^subject\s*:\s*/i, '').trim();
-        body = AIService.sanitizeEmailMarkers(rest || generatedContent.trim());
+        body = AIService.sanitizeEmailMarkers(tagged.body || rest || generatedContent.trim());
       }
       if (subject) subject = subject.replace(/^\*\*\s*|\s*\*\*$/g, '').trim();
       generatedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
@@ -507,9 +547,11 @@ export class AIService {
         const code = isLangHeader ? lines.slice(1).join('\n') : raw;
         blocks.push(code.trim());
       }
-      generatedContent = blocks.length > 0
-        ? blocks.join('\n\n')
-        : generatedContent.replace(/```/g, '').trim();
+      generatedContent = tagged.code
+        ? tagged.code
+        : (blocks.length > 0
+            ? blocks.join('\n\n')
+            : generatedContent.replace(/```/g, '').trim());
     }
 
     // Store generated content
