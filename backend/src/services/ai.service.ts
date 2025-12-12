@@ -257,7 +257,9 @@ export class AIService {
       { type: 'code', test: (t) => /```|\bfunction\b|\bconst\b|\bclass\b/.test(t) },
     ];
 
-    const matched = detectors.find((d) => d.test(lower));
+    const matched = detectors.find((d) => d.test(lower)) ||
+      // Heuristic: if user explicitly asked for email
+      (/\bemail\b/.test(message.toLowerCase()) ? { type: 'email', test: () => true } : undefined);
     if (matched) {
       try {
         let subject: string | undefined;
@@ -268,7 +270,20 @@ export class AIService {
           const subjectMatch = assistantMessage.match(/subject\s*:\s*(.*)/i);
           const bodyMatch = assistantMessage.match(/body\s*:\s*([\s\S]*)/i);
           subject = subjectMatch?.[1]?.trim();
-          body = bodyMatch?.[1]?.trim() || assistantMessage.trim();
+          // If no explicit Body:, split by first blank line
+          if (bodyMatch?.[1]) {
+            body = bodyMatch[1].trim();
+          } else {
+            const lines = assistantMessage.split(/\r?\n/);
+            const firstLine = lines[0]?.trim();
+            const rest = lines.slice(1).join('\n').trim();
+            if (!subject && firstLine) subject = firstLine.replace(/^subject\s*:\s*/i, '').trim();
+            body = rest || assistantMessage.trim();
+          }
+
+          // Enforce sanitized email rendering: rebuild content block
+          const sanitized = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
+          assistantMessage = sanitized;
         }
 
         await prisma.content.create({
@@ -377,6 +392,25 @@ export class AIService {
       throw err;
     }
 
+    // If email, sanitize to extract subject/body
+    let subject: string | undefined;
+    let body: string | undefined;
+    if (type === 'email') {
+      const subjectMatch = generatedContent.match(/subject\s*:\s*(.*)/i);
+      const bodyMatch = generatedContent.match(/body\s*:\s*([\s\S]*)/i);
+      subject = subjectMatch?.[1]?.trim();
+      if (bodyMatch?.[1]) {
+        body = bodyMatch[1].trim();
+      } else {
+        const lines = generatedContent.split(/\r?\n/);
+        const firstLine = lines[0]?.trim();
+        const rest = lines.slice(1).join('\n').trim();
+        if (!subject && firstLine) subject = firstLine.replace(/^subject\s*:\s*/i, '').trim();
+        body = rest || generatedContent.trim();
+      }
+      generatedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
+    }
+
     // Store generated content
     const content = await prisma.content.create({
       data: {
@@ -385,6 +419,8 @@ export class AIService {
         data: JSON.stringify({
           prompt,
           content: generatedContent,
+          ...(subject ? { subject } : {}),
+          ...(body ? { body } : {}),
           businessName: agent.business.name,
           brandTone: agent.business.brandTone,
           generatedAt: new Date().toISOString(),
