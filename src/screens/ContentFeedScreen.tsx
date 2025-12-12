@@ -81,8 +81,18 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         normalized.map(async (c: GeneratedContent) => {
           try {
             if (c.media && c.media.length > 0) {
+              const normalize = (m: any) => {
+                const v = typeof m === 'string' ? m : (m?.base64 || m?.url);
+                if (!v) return null;
+                const isHttp = /^https?:\/\//i.test(v);
+                const isData = /^data:image\//i.test(v);
+                if (isHttp || isData) return v;
+                // Raw base64 without data URI: assume PNG
+                return `data:image/png;base64,${v}`;
+              };
+              const normalizedMedia = (c.media || []).map(normalize).filter(Boolean) as string[];
               const existing = await getCachedMediaForContent(c.id);
-              const uris = existing || await cacheMediaForContent(c.id, c.media);
+              const uris = existing || await cacheMediaForContent(c.id, normalizedMedia);
               // try to persist URIs on backend for stable reloads
               try { await updateContentMedia({ contentId: c.id, media: uris }); }
               catch (e: any) {
