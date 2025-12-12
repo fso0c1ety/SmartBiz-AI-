@@ -33,16 +33,18 @@ export const Card: React.FC<CardProps> = ({ children, style, noPadding = false }
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 4,
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
   },
   cardPadding: {
-    padding: Spacing.md,
+    padding: Spacing.lg,
   },
 });

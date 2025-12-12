@@ -82,19 +82,20 @@ export const Input: React.FC<InputProps> = ({
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.md,
+    marginBottom: Spacing.lg,
   },
   label: {
     fontSize: FontSize.sm,
-    fontWeight: '500',
-    marginBottom: Spacing.xs,
+    fontWeight: '600',
+    marginBottom: Spacing.sm,
   },
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: BorderRadius.md,
-    borderWidth: 1,
-    paddingHorizontal: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    paddingHorizontal: Spacing.lg,
+    minHeight: 52,
   },
   input: {
     flex: 1,
@@ -102,17 +103,17 @@ const styles = StyleSheet.create({
     fontSize: FontSize.base,
   },
   inputWithIcon: {
-    paddingLeft: Spacing.xs,
+    paddingLeft: Spacing.sm,
   },
   icon: {
-    marginRight: Spacing.xs,
+    marginRight: Spacing.sm,
   },
   eyeIcon: {
-    padding: Spacing.xs,
+    padding: Spacing.sm,
   },
   error: {
     fontSize: FontSize.xs,
-    marginTop: Spacing.xs,
+    marginTop: Spacing.sm,
     marginLeft: Spacing.xs,
   },
 });

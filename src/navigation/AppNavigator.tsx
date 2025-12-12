@@ -13,9 +13,12 @@ import { ForgotPasswordScreen } from '../screens/ForgotPasswordScreen';
 import { SetupBusinessScreen } from '../screens/SetupBusinessScreen';
 import { SelectAgentScreen } from '../screens/SelectAgentScreen';
 import { CreateAgentScreen } from '../screens/CreateAgentScreen';
+import { EnhancedCreateAgentScreen } from '../screens/EnhancedCreateAgentScreen';
 import { AgentWorkspaceScreen } from '../screens/AgentWorkspaceScreen';
 import { ContentGeneratorScreen } from '../screens/ContentGeneratorScreen';
+import { ContentFeedScreen } from '../screens/ContentFeedScreen';
 import { SettingsScreen } from '../screens/SettingsScreen';
+import { AIInsightsScreen } from '../screens/AIInsightsScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
@@ -61,6 +64,13 @@ export const AppNavigator = () => {
               }}
             />
             <Stack.Screen 
+              name="EnhancedCreateAgent" 
+              component={EnhancedCreateAgentScreen}
+              options={{
+                presentation: 'modal',
+              }}
+            />
+            <Stack.Screen 
               name="AgentWorkspace" 
               component={AgentWorkspaceScreen}
             />
@@ -72,8 +82,16 @@ export const AppNavigator = () => {
               }}
             />
             <Stack.Screen 
+              name="ContentFeed" 
+              component={ContentFeedScreen}
+            />
+            <Stack.Screen 
               name="Settings" 
               component={SettingsScreen}
+            />
+            <Stack.Screen 
+              name="AIInsights" 
+              component={AIInsightsScreen}
             />
           </>
         )}

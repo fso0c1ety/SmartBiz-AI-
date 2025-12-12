@@ -40,37 +40,39 @@ export const Button: React.FC<ButtonProps> = ({
 
   const getButtonStyle = (): ViewStyle => {
     const baseStyle: ViewStyle = {
-      borderRadius: BorderRadius.lg,
+      borderRadius: BorderRadius.xl,
       alignItems: 'center',
       justifyContent: 'center',
       flexDirection: 'row',
       overflow: 'hidden',
-      shadowColor: '#000',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowColor: variant === 'primary' ? colors.primary : '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: variant === 'primary' ? 0.3 : 0.08,
+      shadowRadius: 12,
+      elevation: variant === 'primary' ? 8 : 3,
     };
 
     // Size
     const sizeStyles: Record<string, ViewStyle> = {
-      small: { paddingVertical: Spacing.sm, paddingHorizontal: Spacing.md },
-      medium: { paddingVertical: Spacing.md, paddingHorizontal: Spacing.lg },
-      large: { paddingVertical: Spacing.lg, paddingHorizontal: Spacing.xl },
+      small: { paddingVertical: 10, paddingHorizontal: Spacing.md },
+      medium: { paddingVertical: 14, paddingHorizontal: Spacing.lg },
+      large: { paddingVertical: 18, paddingHorizontal: Spacing.xl },
     };
 
     // Variant
     const variantStyles: Record<string, ViewStyle> = {
       primary: {
-        backgroundColor: colors.secondary,
+        backgroundColor: colors.primary,
       },
       secondary: {
         backgroundColor: colors.surface,
+        borderWidth: 1,
+        borderColor: colors.border,
       },
       outline: {
         backgroundColor: 'transparent',
         borderWidth: 2,
-        borderColor: colors.secondary,
+        borderColor: colors.primary,
       },
       ghost: {
         backgroundColor: 'transparent',
@@ -82,7 +84,7 @@ export const Button: React.FC<ButtonProps> = ({
       ...sizeStyles[size],
       ...variantStyles[variant],
       ...(fullWidth && { width: '100%' }),
-      ...(disabled && { opacity: 0.6 }),
+      ...(disabled && { opacity: 0.5 }),
     };
   };
 

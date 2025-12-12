@@ -12,7 +12,10 @@ export type RootStackParamList = {
   SetupBusiness: undefined;
   SelectAgent: { businessId: string };
   CreateAgent: undefined;
+  EnhancedCreateAgent: undefined;
   AgentWorkspace: { agentId?: string };
   ContentGenerator: undefined;
+  ContentFeed: undefined;
   Settings: undefined;
+  AIInsights: undefined;
 };

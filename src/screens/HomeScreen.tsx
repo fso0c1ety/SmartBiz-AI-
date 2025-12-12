@@ -46,7 +46,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [agentToDelete, setAgentToDelete] = useState<AIAgent | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [filter, setFilter] = useState<'all' | 'active' | 'idle'>('all');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  // Simulate real-time agent activity
+  const [agentActivity, setAgentActivity] = useState<Record<string, { status: 'active' | 'idle', task: string, progress: number }>>({});
 
   useEffect(() => {
     Animated.timing(fadeAnim, {
@@ -193,7 +197,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       </Text>
       <TouchableOpacity
         style={[styles.createButton, { backgroundColor: colors.primary }]}
-        onPress={() => navigation.navigate('SetupBusiness')}
+        onPress={() => navigation.navigate('EnhancedCreateAgent')}
       >
         <Ionicons name="add" size={18} color="#fff" />
         <Text style={styles.createButtonText}>Create Employee</Text>
@@ -240,7 +244,7 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
       {agents.length > 0 && (
         <TouchableOpacity
           style={[styles.fab, { backgroundColor: colors.primary }]}
-          onPress={() => navigation.navigate('SetupBusiness')}
+          onPress={() => navigation.navigate('EnhancedCreateAgent')}
           activeOpacity={0.8}
         >
           <Ionicons name="add" size={28} color="#fff" />

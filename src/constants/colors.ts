@@ -1,35 +1,39 @@
 export const Colors = {
   light: {
-    primary: '#FF6B5B',        // Warm coral/red from robot
-    secondary: '#FFA14A',      // Orange from robot
+    primary: '#FF6B5B',        // Coral red
+    secondary: '#FFA14A',      // Vibrant orange
     accent: '#FF8C42',         // Orange-red accent
-    background: '#FFFFFF',
-    surface: '#FFF9F5',        // Warm off-white
+    background: '#F8F9FC',     // Light grayish-blue
+    surface: '#FFFFFF',        // Pure white cards
     card: '#FFFFFF',
-    text: '#1A1A1A',
-    textSecondary: '#666666',
-    textTertiary: '#999999',
-    border: '#FFE5DC',         // Warm border
+    text: '#1A1F36',           // Deep blue-gray
+    textSecondary: '#697386',  // Muted gray
+    textTertiary: '#A0AEC0',   // Light gray
+    border: '#E2E8F0',         // Soft border
     error: '#EF4444',
-    success: '#FF6B5B',        // Coral success
-    warning: '#FFA14A',        // Orange warning
-    shadow: 'rgba(255, 107, 91, 0.1)',
+    success: '#10B981',        // Modern green
+    warning: '#F59E0B',
+    shadow: 'rgba(0, 0, 0, 0.08)',
+    gradient1: '#FF6B5B',
+    gradient2: '#FFA14A',
   },
   dark: {
-    primary: '#FF6B5B',        // Warm coral/red
-    secondary: '#FFA14A',      // Orange
+    primary: '#FF6B5B',        // Coral red
+    secondary: '#FFA14A',      // Vibrant orange
     accent: '#FFB366',         // Lighter orange
-    background: '#1A1A1A',
-    surface: '#2D2520',        // Warm dark surface
-    card: '#2D2520',
-    text: '#FFFAF7',
-    textSecondary: '#D4A574',
-    textTertiary: '#A88860',
-    border: '#4D3D2D',         // Warm border
+    background: '#0F172A',     // Deep navy
+    surface: '#1E293B',        // Dark slate
+    card: '#1E293B',
+    text: '#F1F5F9',           // Almost white
+    textSecondary: '#94A3B8',  // Slate gray
+    textTertiary: '#64748B',   // Darker slate
+    border: '#334155',         // Dark border
     error: '#EF4444',
-    success: '#FF6B5B',        // Coral success
-    warning: '#FFA14A',        // Orange warning
-    shadow: 'rgba(255, 107, 91, 0.3)',
+    success: '#10B981',        // Modern green
+    warning: '#F59E0B',
+    shadow: 'rgba(0, 0, 0, 0.5)',
+    gradient1: '#FF6B5B',
+    gradient2: '#FFA14A',
   },
 };
 

@@ -1,5 +1,6 @@
 import React from 'react';
 import { View, StyleSheet, ViewStyle } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { BorderRadius, Spacing } from '../constants/spacing';
 
 interface GradientCardProps {
@@ -12,47 +13,45 @@ interface GradientCardProps {
 export const GradientCard: React.FC<GradientCardProps> = ({
   children,
   style,
-  colors = ['#2D6AFF', '#10B981'],
+  colors = ['#FF6B5B', '#FFA14A'],
   noPadding = false,
 }) => {
   return (
     <View style={[styles.container, style]}>
-      <View
-        style={[
-          styles.gradient,
-          {
-            backgroundColor: colors[0],
-          },
-        ]}
+      <LinearGradient
+        colors={colors}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.gradient}
       >
         <View style={[styles.content, !noPadding && styles.contentPadding]}>
           {children}
         </View>
-      </View>
+      </LinearGradient>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
     overflow: 'hidden',
-    shadowColor: '#000',
+    shadowColor: '#FF6B5B',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: 8,
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 12,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: 20,
+    elevation: 10,
   },
   gradient: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
   },
   content: {
-    borderRadius: BorderRadius.lg,
+    borderRadius: BorderRadius.xl,
   },
   contentPadding: {
-    padding: Spacing.lg,
+    padding: Spacing.xl,
   },
 });
