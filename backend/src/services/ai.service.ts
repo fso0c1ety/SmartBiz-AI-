@@ -619,7 +619,7 @@ export class AIService {
     try {
       const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
       if (ids.length > 0) {
-        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE messageId IN (${placeholders}) ORDER BY createdAt DESC`, ...ids);
+        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE messageId IN (${placeholders}::uuid) ORDER BY createdAt DESC`, ...ids);
       }
     } catch (e: any) {
       console.warn('⚠️ Failed to query message media rows:', e?.message || e);
@@ -727,7 +727,7 @@ export class AIService {
       // Using raw query to avoid Prisma 7 migration hurdles
       const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
       if (ids.length > 0) {
-        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE contentId IN (${placeholders}) ORDER BY createdAt DESC`, ...ids);
+        mediaRows = await prisma.$queryRawUnsafe(`SELECT * FROM media WHERE contentId IN (${placeholders}::uuid) ORDER BY createdAt DESC`, ...ids);
       }
     } catch (e: any) {
       console.warn('⚠️ Failed to query media rows:', e?.message || e);
