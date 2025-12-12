@@ -509,7 +509,7 @@ const styles = StyleSheet.create({
   },
   filterContent: {
     paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingVertical: Spacing.sm,
     gap: Spacing.sm,
   },
   filterTab: {
@@ -536,7 +536,7 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: Spacing.lg,
-    paddingBottom: 100,
+    paddingBottom: 120,
   },
   contentCard: {
     marginBottom: Spacing.md,

@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   FlatList,
   Animated,
-  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { CommonActions } from '@react-navigation/native';
@@ -35,59 +34,42 @@ interface Agent {
   niche: string;
 }
 
-const AGENT_IMAGES = [
-  require('../../assets/robot1.jpg'),
-  require('../../assets/robot2.jpg'),
-  require('../../assets/robot3.jpg'),
-  require('../../assets/robot4.jpg'),
-  require('../../assets/robot5.jpg'),
-];
-
 const AVAILABLE_AGENTS: Agent[] = [
   {
-    id: 'alex-universal-1',
-    name: 'Alex',
-    role: 'Universal Assistant',
-    description: 'A versatile AI that can help with any task, from content to strategy and everything in between',
-    icon: 'sparkles',
-    color: '#FF6B6B',
-    niche: 'Universal',
-  },
-  {
-    id: 'jordan-universal-2',
-    name: 'Jordan',
-    role: 'Creative Genius',
-    description: 'Unlimited creativity and idea generation - perfect for brainstorming, design, and innovation',
-    icon: 'bulb',
-    color: '#4ECDC4',
-    niche: 'Creative',
-  },
-  {
-    id: 'taylor-universal-3',
-    name: 'Taylor',
-    role: 'Growth Specialist',
-    description: 'Master of growth strategies, optimization, and scaling - applies to any business goal',
-    icon: 'trending-up',
-    color: '#45B7D1',
-    niche: 'Growth',
-  },
-  {
-    id: 'morgan-universal-4',
-    name: 'Morgan',
-    role: 'Multi-Purpose Expert',
-    description: 'Jack of all trades - adapts to whatever your business needs most right now',
-    icon: 'cog',
-    color: '#9B59B6',
-    niche: 'Multi-Purpose',
-  },
-  {
-    id: 'casey-universal-5',
-    name: 'Casey',
-    role: 'Smart Analyst',
-    description: 'Data-driven insights and strategic analysis for any business challenge or opportunity',
+    id: 'marketing-ai-1',
+    name: 'Marketing AI',
+    role: 'Marketing AI',
+    description: 'Specialized in marketing strategies, campaigns, and customer engagement',
     icon: 'analytics',
-    color: '#F39C12',
-    niche: 'Analysis',
+    color: '#FF6B6B',
+    niche: 'Marketing',
+  },
+  {
+    id: 'sales-ai-2',
+    name: 'Sales',
+    role: 'Sales',
+    description: 'Expert in sales processes, lead generation, and closing deals',
+    icon: 'trending-up',
+    color: '#4ECDC4',
+    niche: 'Sales',
+  },
+  {
+    id: 'support-ai-3',
+    name: 'Support',
+    role: 'Support',
+    description: 'Handles customer support, troubleshooting, and assistance',
+    icon: 'cog',
+    color: '#45B7D1',
+    niche: 'Support',
+  },
+  {
+    id: 'content-ai-4',
+    name: 'Content',
+    role: 'Content',
+    description: 'Creates engaging content, copywriting, and media production',
+    icon: 'bulb',
+    color: '#9B59B6',
+    niche: 'Content',
   },
 ];
 
@@ -151,17 +133,14 @@ export const SelectAgentScreen: React.FC<SelectAgentScreenProps> = ({ navigation
       <Animated.View style={{ opacity: fadeAnim }}>
         <View style={[styles.agentCard, { backgroundColor: colors.card }]}>
           <View style={styles.cardInner}>
-            {/* Avatar with uploaded robot image */}
+            {/* Avatar with icon */}
             <View
               style={[
                 styles.avatar,
                 { backgroundColor: item.color },
               ]}
             >
-              <Image
-                source={AGENT_IMAGES[index % AGENT_IMAGES.length]}
-                style={styles.avatarImage}
-              />
+              <Ionicons name={item.icon as any} size={24} color="#FFFFFF" />
             </View>
 
             {/* Agent details */}
@@ -265,12 +244,6 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.md,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  avatarImage: {
-    width: '100%',
-    height: '100%',
-    borderRadius: BorderRadius.full,
-    resizeMode: 'cover',
   },
   details: {
     flex: 1,

@@ -53,19 +53,17 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
   const { sendMessage: sendApiMessage, getMessages } = useApi();
   const { showToast } = useToastStore();
 
-  const agentLogoSources: Record<string, any> = {
-    alex: require('../../assets/robot1.jpg'),
-    jordan: require('../../assets/robot2.jpg'),
-    taylor: require('../../assets/robot3.jpg'),
-    morgan: require('../../assets/robot4.jpg'),
-    casey: require('../../assets/robot5.jpg'),
-    default: require('../../assets/robot1.jpg'),
+  const agentIconMap: Record<string, string> = {
+    'marketing ai': 'analytics',
+    'sales': 'trending-up',
+    'support': 'cog',
+    'content': 'bulb',
+    default: 'business',
   };
 
-  const getAgentLogoSource = () => {
-    if (selectedAgent?.logo) return { uri: selectedAgent.logo };
+  const getAgentIcon = () => {
     const key = selectedAgent?.name?.toLowerCase() || selectedAgent?.role?.toLowerCase();
-    return (key && agentLogoSources[key]) || agentLogoSources.default;
+    return (key && agentIconMap[key]) || agentIconMap.default;
   };
 
   const [message, setMessage] = useState('');
@@ -479,10 +477,13 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         onTouchCancel={() => setHoveredMessageId(null)}
       >
         {!item.isUser && (
-          <Image
-            source={getAgentLogoSource()}
-            style={styles.aiAvatarSmall}
-          />
+          <View style={styles.aiAvatarSmall}>
+            {selectedAgent?.logo ? (
+              <Image source={{ uri: selectedAgent.logo }} style={styles.aiAvatarImage} />
+            ) : (
+              <Ionicons name={getAgentIcon() as any} size={20} color="#FFFFFF" />
+            )}
+          </View>
         )}
         <View style={styles.messageContent}>
           <View
@@ -554,10 +555,13 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         </TouchableOpacity>
 
         <View style={styles.headerCenter}>
-          <Image
-            source={getAgentLogoSource()}
-            style={styles.agentLogo}
-          />
+          <View style={styles.agentLogo}>
+            {selectedAgent?.logo ? (
+              <Image source={{ uri: selectedAgent.logo }} style={styles.agentLogoImage} />
+            ) : (
+              <Ionicons name={getAgentIcon() as any} size={24} color={colors.primary} />
+            )}
+          </View>
           <View style={styles.headerText}>
             <Text style={[styles.headerTitle, { color: colors.text }]} numberOfLines={1}>
               {selectedAgent?.role || 'AI Employee'}
@@ -677,6 +681,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     overflow: 'hidden',
+  },
+  agentLogoImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: BorderRadius.sm,
+    resizeMode: 'cover',
   },
   headerText: {
     alignItems: 'center',

@@ -23,14 +23,6 @@ import { useApi } from '../hooks/useApi';
 import { useToastStore } from '../store/useToastStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-const AGENT_IMAGES = [
-  require('../../assets/robot1.jpg'),
-  require('../../assets/robot2.jpg'),
-  require('../../assets/robot3.jpg'),
-  require('../../assets/robot4.jpg'),
-  require('../../assets/robot5.jpg'),
-];
-
 type HomeScreenProps = {
   navigation: NativeStackNavigationProp<any>;
 };
@@ -48,6 +40,15 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [filter, setFilter] = useState<'all' | 'active' | 'idle'>('all');
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  const getAgentIcon = (role: string) => {
+    const lowerRole = role.toLowerCase();
+    if (lowerRole.includes('marketing')) return 'analytics';
+    if (lowerRole.includes('sales')) return 'trending-up';
+    if (lowerRole.includes('support')) return 'cog';
+    if (lowerRole.includes('content')) return 'bulb';
+    return 'business';
+  };
 
   // Simulate real-time agent activity
   const [agentActivity, setAgentActivity] = useState<Record<string, { status: 'active' | 'idle', task: string, progress: number }>>({});
@@ -141,10 +142,11 @@ export const HomeScreen: React.FC<HomeScreenProps> = ({ navigation }) => {
             {/* Agent header */}
             <View style={styles.agentHeader}>
               <View style={[styles.avatar, { backgroundColor: colors.surface }]}>
-                <Image
-                  source={item.logo ? { uri: item.logo } : AGENT_IMAGES[index % AGENT_IMAGES.length]}
-                  style={styles.logoImage}
-                />
+                {item.logo ? (
+                  <Image source={{ uri: item.logo }} style={styles.logoImage} />
+                ) : (
+                  <Ionicons name={getAgentIcon(item.role) as any} size={24} color={colors.primary} />
+                )}
               </View>
               <View style={styles.agentInfo}>
                 <Text style={[styles.roleName, { color: colors.text }]} numberOfLines={1}>
