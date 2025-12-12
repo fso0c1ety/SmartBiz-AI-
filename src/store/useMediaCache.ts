@@ -27,6 +27,17 @@ export const cacheMediaForContent = async (contentId: string, media: MediaItem[]
       const base64Data = src.split(',')[1];
       await FileSystem.writeAsStringAsync(path, base64Data, { encoding: FileSystem.EncodingType.Base64 });
       uris.push('file://' + path);
+    } else if (src.startsWith('http')) {
+      // Download and cache HTTP images
+      const ext = 'jpg'; // assume
+      const path = mediaDir + `smartbiz_${contentId}_${Date.now()}.${ext}`;
+      try {
+        await FileSystem.downloadAsync(src, path);
+        uris.push('file://' + path);
+      } catch (e) {
+        console.warn('Failed to download image:', src, e);
+        uris.push(src); // fallback to URL
+      }
     } else {
       uris.push(src);
     }
