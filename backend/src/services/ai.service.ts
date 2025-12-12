@@ -466,7 +466,7 @@ export class AIService {
         agentName: content.agent.agentName,
         type: content.type,
         platform: data.platform,
-        content: data.text || data.caption || '',
+        content: data.content || data.text || data.caption || '',
         media: data.media || [],
         status: data.status || 'draft',
         createdAt: content.createdAt.toISOString(),

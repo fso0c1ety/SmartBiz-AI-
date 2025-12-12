@@ -26,7 +26,7 @@ interface GeneratedContent {
   id: string;
   agentId: string;
   agentName: string;
-  type: 'post' | 'email' | 'article' | 'ad';
+  type: 'post' | 'caption' | 'email' | 'blog' | 'ad';
   platform?: 'instagram' | 'tiktok' | 'twitter' | 'facebook' | 'linkedin';
   content: string;
   media?: string[];
@@ -44,7 +44,7 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
   const colors = Colors[colorScheme];
   const { showToast } = useToastStore();
 
-  const [filter, setFilter] = useState<'all' | 'post' | 'email' | 'article'>('all');
+  const [filter, setFilter] = useState<'all' | 'post' | 'caption' | 'email' | 'blog' | 'ad'>('all');
   const [contents, setContents] = useState<GeneratedContent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -60,8 +60,11 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         type: filter === 'all' ? undefined : filter,
         limit: 50,
       });
+      console.log('📊 Content data received:', data);
+      console.log('📊 Contents array:', data.contents);
       setContents(data.contents || []);
     } catch (error: any) {
+      console.error('❌ Load content error:', error);
       showToast(error.message || 'Failed to load content', 'error');
     } finally {
       setIsLoading(false);
@@ -290,8 +293,10 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
         {[
           { id: 'all', label: 'All', icon: 'grid' },
           { id: 'post', label: 'Posts', icon: 'images' },
+          { id: 'caption', label: 'Captions', icon: 'text' },
           { id: 'email', label: 'Emails', icon: 'mail' },
-          { id: 'article', label: 'Articles', icon: 'document-text' },
+          { id: 'blog', label: 'Blogs', icon: 'document-text' },
+          { id: 'ad', label: 'Ads', icon: 'megaphone' },
         ].map((tab) => (
           <TouchableOpacity
             key={tab.id}
