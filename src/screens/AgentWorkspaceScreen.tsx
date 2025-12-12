@@ -23,6 +23,7 @@ import { useToastStore } from '../store/useToastStore';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { cacheMediaForContent, getCachedMediaForContent } from '../store/useMediaCache';
+import { loadChatCache, saveChatCache } from '../store/usePersistentCache';
 const simpleHash = (s: string) => {
   let h = 0;
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
@@ -80,7 +81,11 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
   useFocusEffect(
     React.useCallback(() => {
       if (selectedAgent?.id) {
-        loadMessages();
+        (async () => {
+          const cached = await loadChatCache(selectedAgent.id as string);
+          if (cached && cached.length) setMessages(cached);
+          await loadMessages();
+        })();
       }
     }, [selectedAgent?.id])
   );
@@ -170,6 +175,8 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         })
       );
       setMessages(formattedMessages);
+      // Save locally for persistence
+      try { if (selectedAgent?.id) await saveChatCache(selectedAgent.id, formattedMessages); } catch {}
     } catch (error) {
       console.error('Failed to load messages:', error);
     } finally {
@@ -240,6 +247,7 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
 
       // Add AI message and start typing animation
       setMessages((prev) => [...prev, aiMessage]);
+      try { if (selectedAgent?.id) await saveChatCache(selectedAgent.id, [...messages, aiMessage]); } catch {}
       setTypingMessage(aiMessage);
       
       let displayIndex = 0;

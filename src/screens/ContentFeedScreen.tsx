@@ -22,6 +22,7 @@ import { useThemeStore } from '../store/useThemeStore';
 import { useToastStore } from '../store/useToastStore';
 import { getGeneratedContent, postToSocialMedia, updateContentMedia } from '../services/agentService';
 import { cacheMediaForContent, getCachedMediaForContent } from '../store/useMediaCache';
+import { loadFeedCache, saveFeedCache } from '../store/usePersistentCache';
 
 type ContentFeedScreenProps = {
   navigation: StackNavigationProp<RootStackParamList, 'ContentFeed'>;
@@ -57,7 +58,12 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   useEffect(() => {
-    loadContent();
+    // Try local cache first for instant display
+    (async () => {
+      const cached = await loadFeedCache();
+      if (cached && cached.length) setContents(cached);
+      await loadContent();
+    })();
   }, [filter]);
 
   const loadContent = async () => {
@@ -88,6 +94,8 @@ export const ContentFeedScreen: React.FC<ContentFeedScreenProps> = ({ navigation
       console.log('📊 Content data received:', data);
       console.log('📊 Normalized contents:', withCachedMedia);
       setContents(withCachedMedia);
+      // Save for persistence across reloads
+      try { await saveFeedCache(withCachedMedia); } catch {}
     } catch (error: any) {
       console.error('❌ Load content error:', error);
       showToast(error.message || 'Failed to load content', 'error');
