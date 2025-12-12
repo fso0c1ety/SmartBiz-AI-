@@ -405,7 +405,7 @@ export const AgentWorkspaceScreen: React.FC<AgentWorkspaceScreenProps> = ({
         >
           {!item.isUser && (
             <View style={[styles.aiAvatarSmall, { backgroundColor: colors.primary }]}>
-              <Ionicons name="sparkles" size={14} color="#fff" />
+              <Ionicons name={getAgentIcon() as any} size={14} color="#fff" />
             </View>
           )}
           <View
