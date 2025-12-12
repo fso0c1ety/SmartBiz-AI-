@@ -1,7 +1,7 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system';
 
-const KEY_PREFIX = '@media_cache_';
+const KEY_PREFIX = '@media_cache_v2_';
 
 export type MediaItem = string | { base64?: string; url?: string };
 
