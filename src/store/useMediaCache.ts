@@ -15,16 +15,18 @@ export const getCachedMediaForContent = async (contentId: string): Promise<strin
 };
 
 export const cacheMediaForContent = async (contentId: string, media: MediaItem[]): Promise<string[]> => {
+  const mediaDir = FileSystem.documentDirectory + 'media/';
+  await FileSystem.makeDirectoryAsync(mediaDir, { intermediates: true });
   const uris: string[] = [];
   for (const m of media) {
     const src = typeof m === 'string' ? m : (m.base64 || m.url);
     if (!src) continue;
     if (src.startsWith('data:image')) {
       const ext = src.includes('image/png') ? 'png' : 'jpg';
-      const path = FileSystem.cacheDirectory + `smartbiz_${contentId}_${Date.now()}.${ext}`;
+      const path = mediaDir + `smartbiz_${contentId}_${Date.now()}.${ext}`;
       const base64Data = src.split(',')[1];
       await FileSystem.writeAsStringAsync(path, base64Data, { encoding: FileSystem.EncodingType.Base64 });
-      uris.push(path);
+      uris.push('file://' + path);
     } else {
       uris.push(src);
     }
