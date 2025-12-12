@@ -124,6 +124,7 @@ export class AIService {
     if (/\bpost\b|\btweet\b|social\s+post/.test(t)) return 'post';
     if (/\bcaption\b/.test(t)) return 'caption';
     if (/\b(ad|advertisement)\b/.test(t)) return 'ad';
+    if (/\b(image|picture|photo|banner|logo|graphic|illustration)\b/.test(t)) return 'image' as any;
     return null;
   }
 
@@ -203,7 +204,7 @@ export class AIService {
 
     // Check if user is requesting image generation
     const imageKeywords = /\b(generate|create|make|design|draw)\s+(a|an|the|me|my)?\s*(logo|image|picture|graphic|illustration|banner|poster|icon|photo|artwork|design)\b/i;
-    const isImageRequest = imageKeywords.test(message);
+    const isImageRequest = imageKeywords.test(message) || AIService.detectRequestedType(message) === ('image' as any);
 
     if (isImageRequest) {
       // Extract the image description from the message
@@ -230,8 +231,8 @@ export class AIService {
           },
         });
 
-        // Create assistant response with structured image data
-        const assistantMessage = `I've created a professional image for your brand.`;
+        // Minimal assistant response to avoid description
+        const assistantMessage = `Image generated.`;
         
         await prisma.message.create({
           data: {
