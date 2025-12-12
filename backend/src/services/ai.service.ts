@@ -105,11 +105,15 @@ export interface ImageGenerationInput {
 
 export class AIService {
   private static sanitizeEmailMarkers(text: string) {
-    return text
+    // Remove START/END markers, horizontal rules, and duplicate Subject lines inside body
+    let cleaned = text
       .replace(/<<EMAIL_START>>/g, '')
       .replace(/<<EMAIL_END>>/g, '')
       .replace(/^\s*-{3,}\s*$/gm, '')
       .trim();
+    // Remove lines like "**Subject:** ..." or "Subject: ..." inside body
+    cleaned = cleaned.replace(/^\s*(\*\*\s*)?subject\s*:\s*.*$/gmi, '').trim();
+    return cleaned;
   }
   /**
    * Chat with an AI agent
@@ -245,7 +249,7 @@ export class AIService {
       throw err;
     }
 
-    // Store assistant response
+    // Store assistant response (will update below if we sanitize types)
     await prisma.message.create({
       data: {
         agentId,
@@ -293,6 +297,15 @@ export class AIService {
 
           // Enforce sanitized email rendering: rebuild content block
           sanitizedContent = `Subject: ${subject || 'Untitled'}\n\nBody:\n${body}`.trim();
+          // Also sanitize the chat message so marks don't appear in chat view
+          assistantMessage = sanitizedContent;
+          await prisma.message.create({
+            data: {
+              agentId,
+              role: 'assistant',
+              message: sanitizedContent,
+            },
+          });
         }
 
         if (matched.type === 'code') {
@@ -313,6 +326,15 @@ export class AIService {
           } else {
             sanitizedContent = assistantMessage.replace(/```/g, '').trim();
           }
+          // Reflect sanitized code in chat history
+          assistantMessage = sanitizedContent;
+          await prisma.message.create({
+            data: {
+              agentId,
+              role: 'assistant',
+              message: sanitizedContent,
+            },
+          });
         }
 
         await prisma.content.create({
