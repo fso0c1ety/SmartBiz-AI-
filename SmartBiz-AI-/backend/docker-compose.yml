@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg15
+    container_name: smartbiz_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: Kukupermu1234
+      POSTGRES_DB: smartbiz_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    command:
+      - "postgres"
+      - "-c"
+      - "shared_preload_libraries=vector"
+
+volumes:
+  postgres_data:

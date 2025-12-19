@@ -1,0 +1,127 @@
+// This is your Prisma schema file
+// Learn more: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  engineType      = "binary"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String     @id @default(uuid())
+  name         String
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  businesses   Business[]
+
+  @@map("users")
+}
+
+model Business {
+  id             String   @id @default(uuid())
+  userId         String
+  name           String
+  industry       String?
+  description    String?
+  targetAudience String?
+  brandTone      String?  @default("professional")
+  socialLinks    String?  // JSON string: { twitter: "", instagram: "", linkedin: "" }
+  logoUrl        String?
+  brandColors    String?  // JSON string: { primary: "#000", secondary: "#fff" }
+  goals          String?  // JSON string: [ "increase engagement", "brand awareness" ]
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agents Agent[]
+
+  @@index([userId])
+  @@map("businesses")
+}
+
+model Agent {
+  id         String   @id @default(uuid())
+  businessId String?  // Now optional
+  agentName  String   // "Marketing Manager", "Social Media Manager", etc.
+  memory     String?  // Structured business context
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business   Business?   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  messages   Message[]
+  contents   Content[]
+  memories   AgentMemory[]
+  media      Media[]
+
+  @@index([businessId])
+  @@map("agents")
+}
+
+model AgentMemory {
+  id        String   @id @default(uuid())
+  agentId   String
+  content   String   // Structured memory content
+  embedding String?  // Vector embedding as JSON string (for SQLite compatibility)
+  metadata  String?  // JSON string: { type: "business_info", timestamp, etc. }
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@map("agent_memories")
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  agentId   String
+  role      String   // "user", "assistant", "system"
+  message   String   // Message content
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  media Media[]
+
+  @@index([agentId, createdAt])
+  @@map("messages")
+}
+
+model Content {
+  id        String   @id @default(uuid())
+  agentId   String
+  type      String   // "post", "caption", "ad", "blog", etc.
+  data      String   // JSON string: { title, text, platform, hashtags, etc. }
+  createdAt DateTime @default(now())
+
+  agent Agent @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  media Media[]
+
+  @@index([agentId, createdAt])
+  @@map("contents")
+}
+
+model Media {
+  id         String   @id @default(uuid())
+  agentId    String
+  messageId  String?
+  contentId  String?
+  url        String?
+  base64     String?  // data URI or raw base64
+  mimeType   String?  // e.g., image/png
+  createdAt  DateTime @default(now())
+
+  agent   Agent   @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  message Message? @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  content Content? @relation(fields: [contentId], references: [id], onDelete: Cascade)
+
+  @@index([agentId])
+  @@index([messageId])
+  @@index([contentId])
+  @@map("media")
+}
