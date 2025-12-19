@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "SmartBiz AI",
+    "slug": "smartbiz-ai-employees",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/new-icon.png",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#2D6AFF"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.smartbiz.aiemployees"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/new-icon.png",
+        "backgroundColor": "#2D6AFF"
+      },
+      "package": "com.smartbiz.aiemployees",
+      "edgeToEdgeEnabled": true,
+      "predictiveBackGestureEnabled": false,
+      "permissions": [
+        "READ_MEDIA_IMAGES",
+        "WRITE_EXTERNAL_STORAGE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-image-picker",
+      "expo-document-picker",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Allow SmartBiz AI to access your photos",
+          "savePhotosPermission": "Allow SmartBiz AI to save photos to your library",
+          "isAccessMediaLocationEnabled": true
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "eef2dcb5-be91-48cb-9d32-59ddb45f8aaf"
+      }
+    },
+    "owner": "valon112"
+  }
+}
